@@ -59,12 +59,6 @@ public class ContractKiller extends GameMode
 	}
 	
 	@Override
-	public String describeTeam(int team, boolean plural)
-	{
-		return plural ? "players" : "player";
-	}
-	
-	@Override
 	public String getHelpMessage(int num, int team)
 	{
 		switch ( num )

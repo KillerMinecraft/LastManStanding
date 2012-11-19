@@ -100,10 +100,7 @@ public class ContractKiller extends GameMode
 	
 	@Override
 	public boolean isAllowedToRespawn(Player player) { return false; }
-	
-	@Override
-	public boolean lateJoinersMustSpectate() { return false; }
-	
+
 	@Override
 	public boolean useDiscreetDeathMessages() { return false; }
 	

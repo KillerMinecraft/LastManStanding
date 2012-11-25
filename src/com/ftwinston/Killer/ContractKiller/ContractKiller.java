@@ -23,9 +23,6 @@ public class ContractKiller extends GameMode
 	public static final int playersStartFarApart = 0;
 
 	@Override
-	public String getName() { return "Contract Killer"; }
-
-	@Override
 	public int getMinPlayers() { return 4; }
 	
 	@Override
@@ -35,27 +32,6 @@ public class ContractKiller extends GameMode
 			new Option("Players start spread out, quite far apart", false)
 		};
 		return options;
-	}
-	
-	@Override
-	public String[] getSignDescription()
-	{
-		return new String[] {
-			"Each player is",
-			"given a target,",
-			"to kill without",
-			"anyone seeing.",
-			
-			"You can only",
-			"kill your own",
-			"target, or your",
-			"hunter.",
-			
-			"You take your",
-			"victim's target",
-			"when they die.",
-			""
-		};
 	}
 	
 	@Override

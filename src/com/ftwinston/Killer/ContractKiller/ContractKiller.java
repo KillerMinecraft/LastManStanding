@@ -9,7 +9,7 @@ import com.ftwinston.Killer.GameMode;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -63,13 +63,7 @@ public class ContractKiller extends GameMode
 	public boolean teamAllocationIsSecret() { return true; }
 	
 	@Override
-	public boolean usesNether() { return false; }
-	
-	@Override
-	public void worldGenerationComplete(World main, World nether)
-	{
-		
-	}
+	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 	
 	@Override
 	public boolean isLocationProtected(Location l) { return false; }
@@ -83,7 +77,7 @@ public class ContractKiller extends GameMode
 	@Override
 	public Location getSpawnLocation(Player player)
 	{
-		Location worldSpawn = getMainWorld().getSpawnLocation();
+		Location worldSpawn = getWorld(0).getSpawnLocation();
 		
 		if ( !getOption(playersStartFarApart).isEnabled() )
 		{
@@ -370,7 +364,7 @@ public class ContractKiller extends GameMode
 	{
 		// if there's a value saved for this player pair/relationship, see if it was saved within the last 10 secs - if so, don't send.
 		String key = victim + "|" + attacker + "|" + relationship;
-		long currentTime = getMainWorld().getTime();
+		long currentTime = getWorld(0).getTime();
 		
 		if ( victimWarningTimes.containsKey(key) )
 		{

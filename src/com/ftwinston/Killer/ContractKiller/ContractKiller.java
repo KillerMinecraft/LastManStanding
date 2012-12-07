@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.ftwinston.Killer.GameMode;
+import com.ftwinston.Killer.Option;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;

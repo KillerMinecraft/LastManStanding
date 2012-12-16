@@ -134,7 +134,7 @@ public class ContractKiller extends GameMode
 	int allocationProcessID = -1;
 	
 	@Override
-	public void gameStarted()
+	public void gameStarted(boolean isNewWorlds)
 	{
 		allocationComplete = false;
 		nextPlayerNumber = 1; // ensure that the player placement logic starts over again

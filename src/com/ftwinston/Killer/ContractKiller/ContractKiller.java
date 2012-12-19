@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.ftwinston.Killer.GameMode;
+import com.ftwinston.Killer.Helper;
 import com.ftwinston.Killer.Option;
+import com.ftwinston.Killer.PlayerFilter;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -82,8 +84,8 @@ public class ContractKiller extends GameMode
 		
 		if ( !getOption(playersStartFarApart).isEnabled() )
 		{
-			Location spawnPoint = randomizeLocation(worldSpawn, 0, 0, 0, 8, 0, 8);
-			return getSafeSpawnLocationNear(spawnPoint);
+			Location spawnPoint = Helper.randomizeLocation(worldSpawn, 0, 0, 0, 8, 0, 8);
+			return Helper.getSafeSpawnLocationNear(spawnPoint);
 		}
 		
 		// ok, we're going to spawn one player in each chunk, moving in a spiral outward from the center.
@@ -115,7 +117,7 @@ public class ContractKiller extends GameMode
 				number++;
 				
 				if ( number == playerNumber )
-					return getSafeSpawnLocationNear(worldSpawn.add(x * 16, 0, z * 16));
+					return Helper.getSafeSpawnLocationNear(worldSpawn.add(x * 16, 0, z * 16));
 			}
 			
 			// turn left
@@ -152,7 +154,7 @@ public class ContractKiller extends GameMode
 	private void allocateTargets()
 	{
 		// give everyone a target, make them be someone else's target
-		List<Player> players = getOnlinePlayers(true);
+		List<Player> players = getOnlinePlayers(new PlayerFilter().alive());
 		
 		if ( players.size() < getMinPlayers() )
 		{
@@ -167,14 +169,14 @@ public class ContractKiller extends GameMode
 		{
 			
 			Player current = players.remove(random.nextInt(players.size()));
-			setTargetOf(prevOne, current);
+			Helper.setTargetOf(prevOne, current);
 			
 			prevOne.sendMessage("Your target is: " +  ChatColor.YELLOW + current.getName() + ChatColor.RESET + "!");
 			prevOne.getInventory().addItem(new ItemStack(Material.COMPASS, 1));
 			prevOne = current;
 		}
 		
-		setTargetOf(prevOne, firstOne);
+		Helper.setTargetOf(prevOne, firstOne);
 		prevOne.sendMessage("Your target is: " +  ChatColor.YELLOW + firstOne.getName() + ChatColor.RESET + "!");
 		prevOne.getInventory().addItem(new ItemStack(Material.COMPASS, 1));
 		
@@ -201,7 +203,7 @@ public class ContractKiller extends GameMode
 	{
 		if ( !isNewPlayer )
 		{
-			Player target = getTargetOf(player);
+			Player target = Helper.getTargetOf(player);
 			if ( target != null )
 				player.sendMessage("Your target is: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
 			else
@@ -209,7 +211,7 @@ public class ContractKiller extends GameMode
 			return;
 		}
 		
-		List<Player> players = getOnlinePlayers(true);
+		List<Player> players = getOnlinePlayers(new PlayerFilter().alive());
 		if ( players.size() < 2 )
 			return;
 		
@@ -220,9 +222,9 @@ public class ContractKiller extends GameMode
 				continue; // ignore self
 			else if ( i == hunterIndex )
 			{
-				Player target = getTargetOf(hunter);
-				setTargetOf(player, target);
-				setTargetOf(hunter, player);
+				Player target = Helper.getTargetOf(hunter);
+				Helper.setTargetOf(player, target);
+				Helper.setTargetOf(hunter, player);
 				
 				hunter.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + player.getName() + ChatColor.RESET + "!");
 				
@@ -240,21 +242,21 @@ public class ContractKiller extends GameMode
 		if ( hasGameFinished() )
 			return;
 		
-		List<Player> survivors = getOnlinePlayers(true);
+		List<Player> survivors = getOnlinePlayers(new PlayerFilter().alive());
 		
 		if ( survivors.size() > 1 ) 
 		{// find this player's hunter ... change their target to this player's target
 			for ( Player survivor : survivors )
-				if ( player == getTargetOf(survivor) )
+				if ( player == Helper.getTargetOf(survivor) )
 				{
-					Player target = getTargetOf(player);
-					setTargetOf(survivor, target);
+					Player target = Helper.getTargetOf(player);
+					Helper.setTargetOf(survivor, target);
 					
 					survivor.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
 					break;
 				}
 		}
-		setTargetOf(player, null);
+		Helper.setTargetOf(player, null);
 		
 		if ( survivors.size() == 1 )
 		{
@@ -278,7 +280,7 @@ public class ContractKiller extends GameMode
 	@Override
 	public Location getCompassTarget(Player player)
 	{
-		Player target = getTargetOf(player);
+		Player target = Helper.getTargetOf(player);
 		if ( target != null )
 			return target.getLocation();
 		
@@ -297,24 +299,25 @@ public class ContractKiller extends GameMode
 		if ( victim == null )
 			return;
 		
-		Player attacker = getAttacker(event);
+		Player attacker = Helper.getAttacker(event);
 		if ( attacker == null )
 			return;
 		
-		Player victimTarget = getTargetOf(victim);
-		Player attackerTarget = getTargetOf(attacker);
+		Player victimTarget = Helper.getTargetOf(victim);
+		Player attackerTarget = Helper.getTargetOf(attacker);
 
 		// armour is a problem. looks like its handled in EntityHuman.b(DamageSource damagesource, int i) - can replicate the code ... technically also account for enchantments
 		if ( event.getDamage() >= victim.getHealth() )
 			if ( attackerTarget == victim || victimTarget == attacker )
 			{// this interaction was allowed ... should still check if they were observed!
-				List<Player> survivors = getOnlinePlayers(true);
+				List<Player> survivors = getOnlinePlayers(new PlayerFilter().alive());
+				
 				for ( Player observer : survivors )
 				{
 					 if ( observer == victim || observer == attacker )
 						 continue;
 					 
-					 if ( playerCanSeeOther(observer, attacker, maxObservationRangeSq) )
+					 if ( Helper.playerCanSeeOther(observer, attacker, maxObservationRangeSq) )
 					 {
 						 attacker.damage(50);
 						 

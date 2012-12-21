@@ -261,7 +261,7 @@ public class ContractKiller extends GameMode
 		if ( survivors.size() == 1 )
 		{
 			Player survivor = survivors.get(0);
-			broadcastMessage(survivor, survivor.getName() + " is the last man standing, and wins the game!");
+			broadcastMessage(new PlayerFilter().exclude(survivor), survivor.getName() + " is the last man standing, and wins the game!");
 			survivor.sendMessage("You are the last man standing: you win the game!");
 		}
 		else if ( survivors.size() == 0 )

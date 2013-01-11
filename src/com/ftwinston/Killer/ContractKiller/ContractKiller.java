@@ -69,7 +69,7 @@ public class ContractKiller extends GameMode
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 	
 	@Override
-	public boolean isLocationProtected(Location l) { return false; }
+	public boolean isLocationProtected(Location l, Player p) { return false; }
 	
 	@Override
 	public boolean isAllowedToRespawn(Player player) { return false; }
@@ -169,14 +169,14 @@ public class ContractKiller extends GameMode
 		{
 			
 			Player current = players.remove(random.nextInt(players.size()));
-			Helper.setTargetOf(prevOne, current);
+			Helper.setTargetOf(getGame(), prevOne, current);
 			
 			prevOne.sendMessage("Your target is: " +  ChatColor.YELLOW + current.getName() + ChatColor.RESET + "!");
 			prevOne.getInventory().addItem(new ItemStack(Material.COMPASS, 1));
 			prevOne = current;
 		}
 		
-		Helper.setTargetOf(prevOne, firstOne);
+		Helper.setTargetOf(getGame(), prevOne, firstOne);
 		prevOne.sendMessage("Your target is: " +  ChatColor.YELLOW + firstOne.getName() + ChatColor.RESET + "!");
 		prevOne.getInventory().addItem(new ItemStack(Material.COMPASS, 1));
 		
@@ -203,7 +203,7 @@ public class ContractKiller extends GameMode
 	{
 		if ( !isNewPlayer )
 		{
-			Player target = Helper.getTargetOf(player);
+			Player target = Helper.getTargetOf(getGame(), player);
 			if ( target != null )
 				player.sendMessage("Your target is: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
 			else
@@ -222,9 +222,9 @@ public class ContractKiller extends GameMode
 				continue; // ignore self
 			else if ( i == hunterIndex )
 			{
-				Player target = Helper.getTargetOf(hunter);
-				Helper.setTargetOf(player, target);
-				Helper.setTargetOf(hunter, player);
+				Player target = Helper.getTargetOf(getGame(), hunter);
+				Helper.setTargetOf(getGame(), player, target);
+				Helper.setTargetOf(getGame(), hunter, player);
 				
 				hunter.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + player.getName() + ChatColor.RESET + "!");
 				
@@ -247,16 +247,16 @@ public class ContractKiller extends GameMode
 		if ( survivors.size() > 1 ) 
 		{// find this player's hunter ... change their target to this player's target
 			for ( Player survivor : survivors )
-				if ( player == Helper.getTargetOf(survivor) )
+				if ( player == Helper.getTargetOf(getGame(), survivor) )
 				{
-					Player target = Helper.getTargetOf(player);
-					Helper.setTargetOf(survivor, target);
+					Player target = Helper.getTargetOf(getGame(), player);
+					Helper.setTargetOf(getGame(), survivor, target);
 					
 					survivor.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
 					break;
 				}
 		}
-		Helper.setTargetOf(player, null);
+		Helper.setTargetOf(getGame(), player, null);
 		
 		if ( survivors.size() == 1 )
 		{
@@ -280,7 +280,7 @@ public class ContractKiller extends GameMode
 	@Override
 	public Location getCompassTarget(Player player)
 	{
-		Player target = Helper.getTargetOf(player);
+		Player target = Helper.getTargetOf(getGame(), player);
 		if ( target != null )
 			return target.getLocation();
 		
@@ -303,8 +303,8 @@ public class ContractKiller extends GameMode
 		if ( attacker == null )
 			return;
 		
-		Player victimTarget = Helper.getTargetOf(victim);
-		Player attackerTarget = Helper.getTargetOf(attacker);
+		Player victimTarget = Helper.getTargetOf(getGame(), victim);
+		Player attackerTarget = Helper.getTargetOf(getGame(), attacker);
 
 		// armour is a problem. looks like its handled in EntityHuman.b(DamageSource damagesource, int i) - can replicate the code ... technically also account for enchantments
 		if ( event.getDamage() >= victim.getHealth() )

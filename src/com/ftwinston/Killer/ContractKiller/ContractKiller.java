@@ -15,6 +15,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World.Environment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.Material;
@@ -289,7 +290,7 @@ public class ContractKiller extends GameMode
 	
 	private static final double maxObservationRangeSq = 60 * 60;
 	
-	@EventHandler(ignoreCancelled = true)
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void entityDamaged(EntityDamageEvent event)
 	{
 		if ( shouldIgnoreEvent(event.getEntity()) )

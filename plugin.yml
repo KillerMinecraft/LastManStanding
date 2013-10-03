@@ -1,6 +1,6 @@
 name: Contract Killer
-main: com.ftwinston.Killer.ContractKiller.Plugin
-depend: [Killer]
+main: com.ftwinston.KillerMinecraft.Modules.ContractKiller.Plugin
+depend: [Killer Minecraft]
 version: 1
 load: STARTUP
 description: A game mode for Killer Minecraft

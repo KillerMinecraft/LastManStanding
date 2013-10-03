@@ -1,13 +1,15 @@
-package com.ftwinston.Killer.ContractKiller;
+package com.ftwinston.KillerMinecraft.Modules.ContractKiller;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.ftwinston.Killer.GameMode;
-import com.ftwinston.Killer.Helper;
-import com.ftwinston.Killer.Option;
-import com.ftwinston.Killer.PlayerFilter;
+import com.ftwinston.KillerMinecraft.GameMode;
+import com.ftwinston.KillerMinecraft.Helper;
+import com.ftwinston.KillerMinecraft.Option;
+import com.ftwinston.KillerMinecraft.PlayerFilter;
+import com.ftwinston.KillerMinecraft.Configuration.TeamInfo;
+import com.ftwinston.KillerMinecraft.Configuration.ToggleOption;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -24,22 +26,21 @@ public class ContractKiller extends GameMode
 {
 	static final long allocationDelayTicks = 600L; // 30 seconds
 	
-	public static final int playersStartFarApart = 0;
-
+	ToggleOption playersStartFarApart;
+	
 	@Override
 	public int getMinPlayers() { return 4; }
 	
 	@Override
 	public Option[] setupOptions()
 	{
-		Option[] options = {
-			new Option("Players start spread out, quite far apart", false)
-		};
-		return options;
+		playersStartFarApart = new ToggleOption("Players start spread out, quite far apart", false);
+		
+		return new Option[] { playersStartFarApart };
 	}
 	
 	@Override
-	public String getHelpMessage(int num, int team)
+	public String getHelpMessage(int num, TeamInfo team)
 	{
 		switch ( num )
 		{
@@ -83,7 +84,7 @@ public class ContractKiller extends GameMode
 	{
 		Location worldSpawn = getWorld(0).getSpawnLocation();
 		
-		if ( !getOption(playersStartFarApart).isEnabled() )
+		if ( !playersStartFarApart.isEnabled() )
 		{
 			Location spawnPoint = Helper.randomizeLocation(worldSpawn, 0, 0, 0, 8, 0, 8);
 			return Helper.getSafeSpawnLocationNear(spawnPoint);
@@ -137,7 +138,7 @@ public class ContractKiller extends GameMode
 	int allocationProcessID = -1;
 	
 	@Override
-	public void gameStarted(boolean isNewWorlds)
+	public void gameStarted()
 	{
 		allocationComplete = false;
 		nextPlayerNumber = 1; // ensure that the player placement logic starts over again
@@ -200,7 +201,7 @@ public class ContractKiller extends GameMode
 	}
 	
 	@Override
-	public void playerJoinedLate(Player player, boolean isNewPlayer)
+	public void playerJoined(Player player, boolean isNewPlayer)
 	{
 		if ( !isNewPlayer )
 		{
@@ -238,7 +239,7 @@ public class ContractKiller extends GameMode
 	}
 	
 	@Override
-	public void playerKilledOrQuit(OfflinePlayer player)
+	public void playerQuit(OfflinePlayer player)
 	{
 		if ( hasGameFinished() )
 			return;
@@ -293,9 +294,6 @@ public class ContractKiller extends GameMode
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void entityDamaged(EntityDamageEvent event)
 	{
-		if ( shouldIgnoreEvent(event.getEntity()) )
-			return;
-		
 		Player victim = (Player)event.getEntity();
 		if ( victim == null )
 			return;

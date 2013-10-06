@@ -65,9 +65,6 @@ public class ContractKiller extends GameMode
 	}
 	
 	@Override
-	public boolean teamAllocationIsSecret() { return true; }
-	
-	@Override
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 	
 	@Override

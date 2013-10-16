@@ -1,4 +1,4 @@
-package com.ftwinston.KillerMinecraft.Modules.ContractKiller;
+package com.ftwinston.KillerMinecraft.Modules.LastManStanding;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +22,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.Material;
 
-public class ContractKiller extends GameMode
+public class LastManStanding extends GameMode
 {
 	static final long allocationDelayTicks = 600L; // 30 seconds
 	
@@ -198,7 +198,7 @@ public class ContractKiller extends GameMode
 	}
 	
 	@Override
-	public void playerJoined(Player player, boolean isNewPlayer)
+	public void playerJoinedLate(Player player, boolean isNewPlayer)
 	{
 		if ( !isNewPlayer )
 		{

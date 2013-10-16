@@ -1,4 +1,4 @@
-package com.ftwinston.KillerMinecraft.Modules.ContractKiller;
+package com.ftwinston.KillerMinecraft.Modules.LastManStanding;
 
 import org.bukkit.Material;
 
@@ -16,6 +16,6 @@ public class Plugin extends GameModePlugin
 	@Override
 	public GameMode createInstance()
 	{
-		return new ContractKiller();
+		return new LastManStanding();
 	}
 }

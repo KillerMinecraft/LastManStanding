@@ -45,31 +45,6 @@ public class LastManStanding extends GameMode
 	@Override
 	public Option[] setupOptions()
 	{
-		useTeams = new ToggleOption("Use Teams", false, "Allows players to be divided", "into separate teams.") {
-			@Override
-			public void changed()
-			{
-				numTeams.setHidden(!isEnabled()); // can only set team count when teams enabled
-				
-				if ( isEnabled() )
-				{
-					// can only use contract killer & centralized spawns when teams disabled
-					contractKills.setHidden(true);
-					centralizedSpawns.setHidden(true);
-					
-					if ( contractKills.isEnabled() )
-						contractKills.toggle();
-					if ( centralizedSpawns.isEnabled() )
-						centralizedSpawns.toggle();
-				}
-				else
-				{
-					contractKills.setHidden(false);
-					centralizedSpawns.setHidden(false);
-				}
-			}
-		};
-		
 		numTeams = new NumericOption("Number of teams", 2, 4, Material.CHEST, 2) {
 			@Override
 			protected void changed() 
@@ -132,11 +107,38 @@ public class LastManStanding extends GameMode
 		};
 		numTeams.setHidden(true);
 		
-		numLives = new NumericOption("Number of lives", 1, 8, Material.APPLE, 1, "Players can die this many times", "before they're out of the game.", "In a team game, players share", "lives with their teammates.");
+		numLives = new NumericOption("Number of lives", 1, 7, Material.APPLE, 1, "Players can die this many times", "before they're out of the game.", "In a team game, players share", "lives with their teammates.");
 		
 		centralizedSpawns = new ToggleOption("Centralized spawns", true, "When enabled, players spawn in", "a circle around a chest full of", "equipment. When disabled, players", "spawn spread out in the world");
 		
 		contractKills = new ToggleOption("Contract Kills", false, "When enabled, each player is given", "the name of another. They're only", "allowed to kill this target,", "or the player hunting them.", "Trying to hurt anyone else", "will damage yourself instead.");
+		
+		useTeams = new ToggleOption("Use Teams", false, "Allows players to be divided", "into separate teams.") {
+			@Override
+			public void changed()
+			{
+				numTeams.setHidden(!isEnabled()); // can only set team count when teams enabled
+				
+				if ( isEnabled() )
+				{
+					// can only use contract killer & centralized spawns when teams disabled
+					contractKills.setHidden(true);
+					centralizedSpawns.setHidden(true);
+					
+					if ( contractKills.isEnabled() )
+						contractKills.toggle();
+					if ( centralizedSpawns.isEnabled() )
+						centralizedSpawns.toggle();
+					setTeams(teams);
+				}
+				else
+				{
+					contractKills.setHidden(false);
+					centralizedSpawns.setHidden(false);
+					setTeams(new TeamInfo[0]);
+				}
+			}
+		};
 		
 		return new Option[] { useTeams, numTeams, centralizedSpawns, contractKills, numLives };
 	}

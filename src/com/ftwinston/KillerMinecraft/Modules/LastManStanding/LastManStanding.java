@@ -29,7 +29,7 @@ public class LastManStanding extends GameMode
 {
 	static final long allocationDelayTicks = 600L; // 30 seconds
 	
-	ToggleOption useTeams, centralizedSpawns, contractKills;
+	ToggleOption useTeams, friendlyFire, centralizedSpawns, contractKills;
 	NumericOption numTeams, numLives;
 	
 	abstract class LMSTeamInfo extends TeamInfo
@@ -109,6 +109,9 @@ public class LastManStanding extends GameMode
 		
 		numLives = new NumericOption("Number of lives", 1, 7, Material.APPLE, 1, "Players can die this many times", "before they're out of the game.", "In a team game, players share", "lives with their teammates.");
 		
+		friendlyFire = new ToggleOption("Friendly fire", true, "When enabled, players can hurt", "their teammates with weapons.");
+		friendlyFire.setHidden(true);
+		
 		centralizedSpawns = new ToggleOption("Centralized spawns", true, "When enabled, players spawn in", "a circle around a chest full of", "equipment. When disabled, players", "spawn spread out in the world");
 		
 		contractKills = new ToggleOption("Contract Kills", false, "When enabled, each player is given", "the name of another. They're only", "allowed to kill this target,", "or the player hunting them.", "Trying to hurt anyone else", "will damage yourself instead.");
@@ -121,6 +124,8 @@ public class LastManStanding extends GameMode
 				
 				if ( isEnabled() )
 				{
+					friendlyFire.setHidden(false);
+					
 					// can only use contract killer & centralized spawns when teams disabled
 					contractKills.setHidden(true);
 					centralizedSpawns.setHidden(true);
@@ -136,6 +141,10 @@ public class LastManStanding extends GameMode
 					contractKills.setHidden(false);
 					centralizedSpawns.setHidden(false);
 					setTeams(new TeamInfo[0]);
+					
+					friendlyFire.setHidden(true);
+					if ( !friendlyFire.isEnabled() )
+						friendlyFire.toggle();
 				}
 			}
 		};
@@ -220,7 +229,7 @@ public class LastManStanding extends GameMode
 				number++;
 				
 				if ( number == playerNumber )
-					return Helper.getSafeSpawnLocationNear(worldSpawn.add(x * 16, 0, z * 16));
+					return Helper.getSafeSpawnLocationNear(worldSpawn.add(x * 32, 0, z * 32));
 			}
 			
 			// turn left

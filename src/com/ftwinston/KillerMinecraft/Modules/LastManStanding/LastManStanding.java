@@ -8,10 +8,12 @@ import com.ftwinston.KillerMinecraft.GameMode;
 import com.ftwinston.KillerMinecraft.Helper;
 import com.ftwinston.KillerMinecraft.Option;
 import com.ftwinston.KillerMinecraft.PlayerFilter;
+import com.ftwinston.KillerMinecraft.Configuration.NumericOption;
 import com.ftwinston.KillerMinecraft.Configuration.TeamInfo;
 import com.ftwinston.KillerMinecraft.Configuration.ToggleOption;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World.Environment;
@@ -20,13 +22,22 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scoreboard.Score;
 import org.bukkit.Material;
 
 public class LastManStanding extends GameMode
 {
 	static final long allocationDelayTicks = 600L; // 30 seconds
 	
-	ToggleOption playersStartFarApart;
+	ToggleOption useTeams, centralizedSpawns, contractKills;
+	NumericOption numTeams, numLives;
+	
+	abstract class LMSTeamInfo extends TeamInfo
+	{
+		public Score lives;
+	}
+	
+	LMSTeamInfo[] teams = new LMSTeamInfo[0];
 	
 	@Override
 	public int getMinPlayers() { return 4; }
@@ -34,9 +45,100 @@ public class LastManStanding extends GameMode
 	@Override
 	public Option[] setupOptions()
 	{
-		playersStartFarApart = new ToggleOption("Players start spread out, quite far apart", false);
+		useTeams = new ToggleOption("Use Teams", false, "Allows players to be divided", "into separate teams.") {
+			@Override
+			public void changed()
+			{
+				numTeams.setHidden(!isEnabled()); // can only set team count when teams enabled
+				
+				if ( isEnabled() )
+				{
+					// can only use contract killer & centralized spawns when teams disabled
+					contractKills.setHidden(true);
+					centralizedSpawns.setHidden(true);
+					
+					if ( contractKills.isEnabled() )
+						contractKills.toggle();
+					if ( centralizedSpawns.isEnabled() )
+						centralizedSpawns.toggle();
+				}
+				else
+				{
+					contractKills.setHidden(false);
+					centralizedSpawns.setHidden(false);
+				}
+			}
+		};
 		
-		return new Option[] { playersStartFarApart };
+		numTeams = new NumericOption("Number of teams", 2, 4, Material.CHEST, 2) {
+			@Override
+			protected void changed() 
+			{
+				LMSTeamInfo[] newTeams = new LMSTeamInfo[numTeams == null ? 2 : numTeams.getValue()];
+				int i;
+				for ( i=0; i<teams.length && i<newTeams.length; i++ )
+					newTeams[i] = teams[i];
+				for ( ; i<newTeams.length; i++ )
+					switch ( i )
+					{
+						case 0:
+							newTeams[i] = new LMSTeamInfo() {
+								@Override
+								public String getName() { return "red team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.RED; }
+								@Override
+								public byte getWoolColor() { return (byte)0xE; }
+								@Override
+								public Color getArmorColor() { return Color.RED; }
+							}; break;
+						case 1:
+							newTeams[i] = new LMSTeamInfo() {
+								@Override
+								public String getName() { return "blue team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.BLUE; }
+								@Override
+								public byte getWoolColor() { return (byte)0xB; }
+								@Override
+								public Color getArmorColor() { return Color.fromRGB(0x0066FF); }
+							}; break;
+						case 2:
+							newTeams[i] = new LMSTeamInfo() {
+								@Override
+								public String getName() { return "yellow team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.YELLOW; }
+								@Override
+								public byte getWoolColor() { return (byte)0x4; }
+								@Override
+								public Color getArmorColor() { return Color.YELLOW; }
+							}; break;
+						case 3:
+							newTeams[i] = new LMSTeamInfo() {
+								@Override
+								public String getName() { return "green team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.GREEN; }
+								@Override
+								public byte getWoolColor() { return (byte)0x5; }
+								@Override
+								public Color getArmorColor() { return Color.GREEN; }
+							}; break;
+					}
+				teams = newTeams;
+				setTeams(teams);
+			}
+		};
+		numTeams.setHidden(true);
+		
+		numLives = new NumericOption("Number of lives", 1, 8, Material.APPLE, 1, "Players can die this many times", "before they're out of the game.", "In a team game, players share", "lives with their teammates.");
+		
+		centralizedSpawns = new ToggleOption("Centralized spawns", true, "When enabled, players spawn in", "a circle around a chest full of", "equipment. When disabled, players", "spawn spread out in the world");
+		
+		contractKills = new ToggleOption("Contract Kills", false, "When enabled, each player is given", "the name of another. They're only", "allowed to kill this target,", "or the player hunting them.", "Trying to hurt anyone else", "will damage yourself instead.");
+		
+		return new Option[] { useTeams, numTeams, centralizedSpawns, contractKills, numLives };
 	}
 	
 	@Override
@@ -81,7 +183,7 @@ public class LastManStanding extends GameMode
 	{
 		Location worldSpawn = getWorld(0).getSpawnLocation();
 		
-		if ( !playersStartFarApart.isEnabled() )
+		if ( centralizedSpawns.isEnabled() )
 		{
 			Location spawnPoint = Helper.randomizeLocation(worldSpawn, 0, 0, 0, 8, 0, 8);
 			return Helper.getSafeSpawnLocationNear(spawnPoint);

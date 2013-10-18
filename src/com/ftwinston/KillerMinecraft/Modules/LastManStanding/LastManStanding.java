@@ -196,7 +196,7 @@ public class LastManStanding extends GameMode
 	{
 		if ( useTeams.isEnabled() )
 		{
-			LMSTeamInfo lmsTeam = (LMSTeamInfo)Helper.getTeam(getGame(), player);
+			LMSTeamInfo lmsTeam = (LMSTeamInfo)getTeam(player);
 			
 			Location spawn = getCircleSpawnLocation(lmsTeam.teamNum);
 			Location spawnPoint = Helper.randomizeLocation(spawn, 0, 0, 0, 8, 0, 8);
@@ -466,6 +466,26 @@ public class LastManStanding extends GameMode
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void entityDamaged(EntityDamageEvent event)
 	{
+		if ( useTeams.isEnabled() )
+		{
+			if ( friendlyFire.isEnabled() )
+				return;
+			
+			Player victim = (Player)event.getEntity();
+			if ( victim == null )
+				return;
+			
+			Player attacker = Helper.getAttacker(event);
+			if ( attacker == null )
+				return;
+			
+			if ( getTeam(victim) == getTeam(attacker) )
+				event.setCancelled(true);
+		}
+		
+		else if ( !contractKills.isEnabled() )
+			return;
+		
 		Player victim = (Player)event.getEntity();
 		if ( victim == null )
 			return;

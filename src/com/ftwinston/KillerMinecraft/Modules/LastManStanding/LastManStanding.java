@@ -27,14 +27,16 @@ import org.bukkit.Material;
 
 public class LastManStanding extends GameMode
 {
-	static final long allocationDelayTicks = 600L; // 30 seconds
+	static final long warmupDelayTicks = 200L; // 10 seconds
 	
 	ToggleOption useTeams, friendlyFire, centralizedSpawns, contractKills;
 	NumericOption numTeams, numLives;
 	
 	abstract class LMSTeamInfo extends TeamInfo
 	{
+		public LMSTeamInfo(int num) { teamNum = num; }
 		public Score lives;
+		public int teamNum;
 	}
 	
 	LMSTeamInfo[] teams = new LMSTeamInfo[0];
@@ -57,7 +59,7 @@ public class LastManStanding extends GameMode
 					switch ( i )
 					{
 						case 0:
-							newTeams[i] = new LMSTeamInfo() {
+							newTeams[i] = new LMSTeamInfo(i) {
 								@Override
 								public String getName() { return "red team"; }
 								@Override
@@ -68,7 +70,7 @@ public class LastManStanding extends GameMode
 								public Color getArmorColor() { return Color.RED; }
 							}; break;
 						case 1:
-							newTeams[i] = new LMSTeamInfo() {
+							newTeams[i] = new LMSTeamInfo(i) {
 								@Override
 								public String getName() { return "blue team"; }
 								@Override
@@ -79,7 +81,7 @@ public class LastManStanding extends GameMode
 								public Color getArmorColor() { return Color.fromRGB(0x0066FF); }
 							}; break;
 						case 2:
-							newTeams[i] = new LMSTeamInfo() {
+							newTeams[i] = new LMSTeamInfo(i) {
 								@Override
 								public String getName() { return "yellow team"; }
 								@Override
@@ -90,7 +92,7 @@ public class LastManStanding extends GameMode
 								public Color getArmorColor() { return Color.YELLOW; }
 							}; break;
 						case 3:
-							newTeams[i] = new LMSTeamInfo() {
+							newTeams[i] = new LMSTeamInfo(i) {
 								@Override
 								public String getName() { return "green team"; }
 								@Override
@@ -158,10 +160,10 @@ public class LastManStanding extends GameMode
 		switch ( num )
 		{
 			case 0:
-				if ( allocationComplete )
-					return "Every player has been assigned a target to kill, which they must do without being seen by anyone else.";
-				else
+				if ( inWarmup )
 					return "Every player will soon be assigned a target to kill, which they must do without being seen by anyone else.";
+				else
+					return "Every player has been assigned a target to kill, which they must do without being seen by anyone else.";
 			
 			case 1:
 				return "Your compass points towards your victim, and if anyone sees you kill them, you will die instead of them.";
@@ -179,9 +181,9 @@ public class LastManStanding extends GameMode
 	
 	@Override
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
-	
+		
 	@Override
-	public boolean isLocationProtected(Location l, Player p) { return false; }
+	public boolean isLocationProtected(Location l, Player p) { return inWarmup && centralizedSpawns.isEnabled(); }
 	
 	@Override
 	public boolean isAllowedToRespawn(Player player) { return false; }
@@ -192,16 +194,66 @@ public class LastManStanding extends GameMode
 	@Override
 	public Location getSpawnLocation(Player player)
 	{
-		Location worldSpawn = getWorld(0).getSpawnLocation();
-		
-		if ( centralizedSpawns.isEnabled() )
+		if ( useTeams.isEnabled() )
 		{
-			Location spawnPoint = Helper.randomizeLocation(worldSpawn, 0, 0, 0, 8, 0, 8);
+			LMSTeamInfo lmsTeam = (LMSTeamInfo)Helper.getTeam(getGame(), player);
+			
+			Location spawn = getCircleSpawnLocation(lmsTeam.teamNum);
+			Location spawnPoint = Helper.randomizeLocation(spawn, 0, 0, 0, 8, 0, 8);
 			return Helper.getSafeSpawnLocationNear(spawnPoint);
 		}
+		else if ( centralizedSpawns.isEnabled() )
+		{
+			int playerNumber = 0; // get a number for this player, somehow.
+			return getCircleSpawnLocation(playerNumber);
+		}
+		else
+			return getSpreadOutSpawn();
+	}
+	
+	final double teamSeparation = 100, playerSeparation = 8;
+	double angularSeparation, spawnCircleRadius;
+
+	private Location getCircleSpawnLocation(int spawnNumber)
+	{
+		// spawns are spread out in a circle around the center.
+		// the radius of this circle is dependent on the number of players/teams, such that they will always
+		// be a fixed distance from their nearest neighbours, regardless of how many players/teams we have.
 		
-		// ok, we're going to spawn one player in each chunk, moving in a spiral outward from the center.
-		// This shape is called an Ulam spiral, and it might be a bit crazy to use this, but there you go.
+		Location spawn = getWorld(0).getSpawnLocation();
+		double angle = angularSeparation * spawnNumber;
+		
+		double x, z;
+		if ( angle < Math.PI / 2)
+		{
+			x = teamSeparation * Math.cos(angle);
+			z = teamSeparation * Math.sin(angle);
+		}
+		else if ( angle < Math.PI )
+		{
+			x = -teamSeparation * Math.cos(Math.PI - angle);
+			z = teamSeparation * Math.sin(Math.PI - angle);
+		}
+		else if ( angle < 3 * Math.PI / 2)
+		{
+			x = -teamSeparation * Math.cos(angle - Math.PI);
+			z = -teamSeparation * Math.sin(angle - Math.PI);
+		}
+		else
+		{
+			x = teamSeparation * Math.cos(2 * Math.PI - angle);
+			z = -teamSeparation * Math.sin(2 * Math.PI - angle);
+		}
+		
+		spawn = spawn.add(x, 0, z);
+		return spawn;
+	}
+
+	private Location getSpreadOutSpawn()
+	{
+		Location worldSpawn = getWorld(0).getSpawnLocation();		
+		// ok, we're going to spawn one player at each vertex of a "square spiral," moving outward from the center.
+		// This shape is called an Ulam spiral, and it might be a bit OTT to use this, but there you go.
 		
 		int x = 0, z = 0;
 		int side = 0, number = 0, sideLength = 0;
@@ -242,15 +294,26 @@ public class LastManStanding extends GameMode
 				sideLength++;
 		}
 	}
-	
-	boolean allocationComplete = false;
+
+	boolean inWarmup = true;
 	int nextPlayerNumber = 1;
 	int allocationProcessID = -1;
 	
 	@Override
 	public void gameStarted()
 	{
-		allocationComplete = false;
+		if ( useTeams.isEnabled() )
+		{
+			angularSeparation = 2 * Math.PI / teams.length;
+			spawnCircleRadius = 0.5 * teamSeparation / Math.sin(angularSeparation / 2);
+		}
+		else if ( centralizedSpawns.isEnabled() )
+		{
+			angularSeparation = 2 * Math.PI / getOnlinePlayers().size();
+			spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
+		}
+		
+		inWarmup = true;
 		nextPlayerNumber = 1; // ensure that the player placement logic starts over again
 		
 		// allocation doesn't happen right away, there's 30 seconds of "scrabbling" first
@@ -260,7 +323,7 @@ public class LastManStanding extends GameMode
 				allocateTargets();
 				allocationProcessID = -1;
 			}
-		}, allocationDelayTicks);
+		}, warmupDelayTicks);
 	}
 	
 	private void allocateTargets()
@@ -293,13 +356,12 @@ public class LastManStanding extends GameMode
 		prevOne.getInventory().addItem(new ItemStack(Material.COMPASS, 1));
 		
 		broadcastMessage("All players have been allocated a target to kill");
-		allocationComplete = true;
+		inWarmup = false;
 	}
 	
 	@Override
 	public void gameFinished()
 	{
-		allocationComplete = false;
 		victimWarningTimes.clear();
 		nextPlayerNumber = 1;
 		

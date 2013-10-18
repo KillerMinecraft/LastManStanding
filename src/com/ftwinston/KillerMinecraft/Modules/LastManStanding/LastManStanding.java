@@ -198,23 +198,26 @@ public class LastManStanding extends GameMode
 		{
 			LMSTeamInfo lmsTeam = (LMSTeamInfo)getTeam(player);
 			
-			Location spawn = getCircleSpawnLocation(lmsTeam.teamNum);
+			Location spawn = getCircleSpawnLocation(lmsTeam.teamNum, teamSeparation);
 			Location spawnPoint = Helper.randomizeLocation(spawn, 0, 0, 0, 8, 0, 8);
 			return Helper.getSafeSpawnLocationNear(spawnPoint);
 		}
 		else if ( centralizedSpawns.isEnabled() )
 		{
-			int playerNumber = 0; // get a number for this player, somehow.
-			return getCircleSpawnLocation(playerNumber);
+			int playerNumber = nextPlayerNumber ++; // get a number for this player, somehow.
+			return getCircleSpawnLocation(playerNumber, playerSeparation);
 		}
 		else
-			return getSpreadOutSpawn();
+		{
+			int playerNumber = nextPlayerNumber ++;
+			return getSpreadOutSpawn(playerNumber);
+		}
 	}
 	
 	final double teamSeparation = 100, playerSeparation = 8;
 	double angularSeparation, spawnCircleRadius;
 
-	private Location getCircleSpawnLocation(int spawnNumber)
+	private Location getCircleSpawnLocation(int spawnNumber, double separation)
 	{
 		// spawns are spread out in a circle around the center.
 		// the radius of this circle is dependent on the number of players/teams, such that they will always
@@ -226,30 +229,33 @@ public class LastManStanding extends GameMode
 		double x, z;
 		if ( angle < Math.PI / 2)
 		{
-			x = teamSeparation * Math.cos(angle);
-			z = teamSeparation * Math.sin(angle);
+			x = separation * Math.cos(angle);
+			z = separation * Math.sin(angle);
 		}
 		else if ( angle < Math.PI )
 		{
-			x = -teamSeparation * Math.cos(Math.PI - angle);
-			z = teamSeparation * Math.sin(Math.PI - angle);
+			x = -separation * Math.cos(Math.PI - angle);
+			z = separation * Math.sin(Math.PI - angle);
 		}
 		else if ( angle < 3 * Math.PI / 2)
 		{
-			x = -teamSeparation * Math.cos(angle - Math.PI);
-			z = -teamSeparation * Math.sin(angle - Math.PI);
+			x = -separation * Math.cos(angle - Math.PI);
+			z = -separation * Math.sin(angle - Math.PI);
 		}
 		else
 		{
-			x = teamSeparation * Math.cos(2 * Math.PI - angle);
-			z = -teamSeparation * Math.sin(2 * Math.PI - angle);
+			x = separation * Math.cos(2 * Math.PI - angle);
+			z = -separation * Math.sin(2 * Math.PI - angle);
 		}
 		
-		spawn = spawn.add(x, 0, z);
+		spawn = spawn.add(x + 0.5, 0, z + 0.5);
+		spawn.setY(Helper.getHighestBlockYAt(spawn.getChunk(), (int)x, (int)z)+1);
+		
+		spawn.setYaw((float)(180 / Math.PI * angle + 90));
 		return spawn;
 	}
 
-	private Location getSpreadOutSpawn()
+	private Location getSpreadOutSpawn(int playerNumber)
 	{
 		Location worldSpawn = getWorld(0).getSpawnLocation();		
 		// ok, we're going to spawn one player at each vertex of a "square spiral," moving outward from the center.
@@ -258,8 +264,6 @@ public class LastManStanding extends GameMode
 		int x = 0, z = 0;
 		int side = 0, number = 0, sideLength = 0;
 		int dir = 0; // 0 = +x, 1 = +z, 2 = -x, 3 = -z
-		
-		int playerNumber = nextPlayerNumber ++;
 		
 		while ( true )
 		{

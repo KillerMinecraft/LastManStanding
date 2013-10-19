@@ -13,6 +13,7 @@ import com.ftwinston.KillerMinecraft.Configuration.NumericOption;
 import com.ftwinston.KillerMinecraft.Configuration.TeamInfo;
 import com.ftwinston.KillerMinecraft.Configuration.ToggleOption;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -23,7 +24,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.Material;
 
 public class LastManStanding extends GameMode
@@ -41,7 +45,7 @@ public class LastManStanding extends GameMode
 	}
 	
 	LMSTeamInfo[] teams = new LMSTeamInfo[0];
-	HashMap<String, Integer> playerLives = new HashMap<String, Integer>(); 
+	HashMap<String, Score> playerLives = new HashMap<String, Score>(); 
 	
 	@Override
 	public int getMinPlayers() { return contractKills.isEnabled() ? 4 : 2; }
@@ -202,6 +206,25 @@ public class LastManStanding extends GameMode
 			}
 	}
 	
+	Objective objective;
+	
+	@Override
+	public Scoreboard createScoreboard()
+	{
+		Scoreboard scoreboard;
+		
+		if ( useTeams.isEnabled() )
+			scoreboard = super.createScoreboard();
+		else
+			scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+		
+		objective = scoreboard.registerNewObjective("lives", "dummy");
+		objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+		objective.setDisplayName("Lives remaining");
+		
+		return scoreboard;
+	}
+	
 	@Override
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 		
@@ -349,17 +372,21 @@ public class LastManStanding extends GameMode
 		else
 		{
 			for ( Player player : players )
-				playerLives.put(player.getName(), numLives.getValue());
+			{
+				Score score = objective.getScore(player);
+				score.setScore(numLives.getValue());
+				playerLives.put(player.getName(), score);
+			}
 			
 			if ( centralizedSpawns.isEnabled() )
 			{
 				angularSeparation = 2 * Math.PI / players.size();
 				spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
+				inWarmup = true;
 			}
+
+			nextPlayerNumber = 1; // ensure that the player placement logic starts over again
 		}
-		
-		inWarmup = true;
-		nextPlayerNumber = 1; // ensure that the player placement logic starts over again
 		
 		// allocation doesn't happen right away, there's 10 seconds of "scrabbling" first
 		allocationProcessID = getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
@@ -417,7 +444,11 @@ public class LastManStanding extends GameMode
 	public void playerJoinedLate(Player player, boolean isNewPlayer)
 	{
 		if ( !useTeams.isEnabled() && isNewPlayer )
-			playerLives.put(player.getName(), numLives.getValue());
+		{
+			Score score = objective.getScore(player);
+			score.setScore(numLives.getValue());
+			playerLives.put(player.getName(), score);
+		}
 		
 		if ( !contractKills.isEnabled() )
 			return;
@@ -468,9 +499,9 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			int lives = playerLives.get(player.getName());
-			if ( lives > 0 )
-				playerLives.put(player.getName(), lives-1);
+			Score score = playerLives.get(player.getName());
+			if ( score.getScore() > 0 )
+				score.setScore(score.getScore()-1);
 		}
 	}
 	
@@ -485,8 +516,8 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			int lives = playerLives.get(player.getName());
-			return lives > 0;
+			Score lives = playerLives.get(player.getName());
+			return lives.getScore() > 0;
 		}
 	}
 	

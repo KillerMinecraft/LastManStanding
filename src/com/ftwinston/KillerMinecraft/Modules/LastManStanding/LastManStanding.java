@@ -186,9 +186,6 @@ public class LastManStanding extends GameMode
 	public boolean isLocationProtected(Location l, Player p) { return inWarmup && centralizedSpawns.isEnabled(); }
 	
 	@Override
-	public boolean isAllowedToRespawn(Player player) { return false; }
-
-	@Override
 	public boolean useDiscreetDeathMessages() { return false; }
 	
 	@Override
@@ -317,6 +314,12 @@ public class LastManStanding extends GameMode
 		{
 			angularSeparation = 2 * Math.PI / teams.length;
 			spawnCircleRadius = 0.5 * teamSeparation / Math.sin(angularSeparation / 2);
+			
+			for ( LMSTeamInfo team : teams )			
+			{
+				int num = getOnlinePlayers(new PlayerFilter().team(team)).size();
+				team.lives.setScore(num * numLives.getValue());
+			}
 		}
 		else if ( centralizedSpawns.isEnabled() )
 		{
@@ -417,44 +420,107 @@ public class LastManStanding extends GameMode
 	}
 	
 	@Override
+	public void playerKilled(Player player)
+	{
+		if ( useTeams.isEnabled() )
+		{
+			LMSTeamInfo team = (LMSTeamInfo)getTeam(player);
+			if ( team.lives.getScore() > 0 )
+				team.lives.setScore(team.lives.getScore() - 1);
+		}
+		else
+		{
+			// how do we store lives against individual players, anyway?
+			
+			// I guess we want some way of overriding the PlayerInfo, perhaps?
+		}
+	}
+	
+
+	@Override
+	public boolean isAllowedToRespawn(Player player)
+	{
+		if ( useTeams.isEnabled() )
+		{
+			LMSTeamInfo team = (LMSTeamInfo)getTeam(player);
+			return team.lives.getScore() > 0;
+		}
+		else
+		{
+			// how do we store lives against individual players, anyway?
+			
+			// I guess we want some way of overriding the PlayerInfo, perhaps?
+			return false;
+		}
+	}
+	
+	@Override
 	public void playerQuit(OfflinePlayer player)
 	{
 		if ( hasGameFinished() )
 			return;
 		
-		List<Player> survivors = getOnlinePlayers(new PlayerFilter().alive());
-		
-		if ( survivors.size() > 1 ) 
-		{// find this player's hunter ... change their target to this player's target
-			for ( Player survivor : survivors )
-				if ( player == Helper.getTargetOf(getGame(), survivor) )
+		if ( useTeams.isEnabled() )
+		{
+			// if only one team has players left, that team wins. Otherwise, continue.
+			
+			LMSTeamInfo lastTeam = null;
+			
+			for ( LMSTeamInfo team : teams )
+				if ( getOnlinePlayers(new PlayerFilter().alive().team(team)).size() > 0 )
 				{
-					Player target = Helper.getTargetOf(getGame(), player);
-					Helper.setTargetOf(getGame(), survivor, target);
-					
-					survivor.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
-					break;
+					if ( lastTeam != null )
+						return; // multiple teams have players left
+					else
+						lastTeam = team;
 				}
-		}
-		Helper.setTargetOf(getGame(), player, null);
-		
-		if ( survivors.size() == 1 )
-		{
-			Player survivor = survivors.get(0);
-			broadcastMessage(new PlayerFilter().exclude(survivor), survivor.getName() + " is the last man standing, and wins the game!");
-			survivor.sendMessage("You are the last man standing: you win the game!");
-		}
-		else if ( survivors.size() == 0 )
-			broadcastMessage("All players died, nobody wins!");
-		else if ( survivors.size() == 3 )
-		{
-			broadcastMessage("Three players remain: everyone is now a legitimate target!");
-			return;
+			
+			if ( lastTeam == null )
+				broadcastMessage("All players dead, game drawn");
+			else
+				broadcastMessage("The " + lastTeam.getChatColor() + lastTeam.getName() + ChatColor.RESET + " is the last team standing. The " + lastTeam.getName() + " wins!");
+				
+			finishGame();
 		}
 		else
-			return; // multiple people left in the game
-		
-		finishGame();
+		{
+			List<Player> survivors = getOnlinePlayers(new PlayerFilter().alive());
+			
+			if ( contractKills.isEnabled() )
+			{
+				if ( survivors.size() > 1 ) 
+				{// find this player's hunter ... change their target to this player's target
+					for ( Player survivor : survivors )
+						if ( player == Helper.getTargetOf(getGame(), survivor) )
+						{
+							Player target = Helper.getTargetOf(getGame(), player);
+							Helper.setTargetOf(getGame(), survivor, target);
+							
+							survivor.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
+							break;
+						}
+				}
+				Helper.setTargetOf(getGame(), player, null);
+			}
+			
+			if ( survivors.size() == 1 )
+			{
+				Player survivor = survivors.get(0);
+				broadcastMessage(new PlayerFilter().exclude(survivor), survivor.getName() + " is the last man standing, and wins the game!");
+				survivor.sendMessage("You are the last man standing: you win the game!");
+			}
+			else if ( survivors.size() == 0 )
+				broadcastMessage("All players died, nobody wins!");
+			else if ( contractKills.isEnabled() && survivors.size() == 3 )
+			{
+				broadcastMessage("Three players remain: everyone is now a legitimate target!");
+				return;
+			}
+			else
+				return; // multiple people left in the game
+			
+			finishGame();
+		}
 	}
 	
 	@Override

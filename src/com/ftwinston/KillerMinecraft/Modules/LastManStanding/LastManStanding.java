@@ -601,11 +601,20 @@ public class LastManStanding extends GameMode
 	@Override
 	public Location getCompassTarget(Player player)
 	{
-		Player target = Helper.getTargetOf(getGame(), player);
-		if ( target != null )
-			return target.getLocation();
-		
-		return null;
+		if ( useTeams.isEnabled() )
+		{
+			TeamInfo team = getTeam(player);
+			return Helper.getNearestPlayerTo(player, getOnlinePlayers(new PlayerFilter().alive().notTeam(team))); // points in a random direction if no players are found
+		}
+		else if ( contractKills.isEnabled() )
+		{
+			Player target = Helper.getTargetOf(getGame(), player);
+			if ( target != null )
+				return target.getLocation();
+			return null;
+		}
+		else
+			return Helper.getNearestPlayerTo(player, getOnlinePlayers(new PlayerFilter().alive())); // points in a random direction if no players are found
 	}
 	
 	private static final double maxObservationRangeSq = 60 * 60;

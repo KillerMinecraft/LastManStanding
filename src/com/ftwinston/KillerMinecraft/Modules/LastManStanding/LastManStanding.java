@@ -122,7 +122,15 @@ public class LastManStanding extends GameMode
 		
 		centralizedSpawns = new ToggleOption("Centralized spawns", true, "When enabled, players spawn in", "a circle around a chest full of", "equipment. When disabled, players", "spawn spread out in the world");
 		
-		contractKills = new ToggleOption("Contract Kills", false, "When enabled, each player is given", "the name of another. They're only", "allowed to kill this target,", "or the player hunting them.", "Trying to hurt anyone else", "will damage yourself instead.");
+		contractKills = new ToggleOption("Contract Kills", false, "When enabled, each player is given", "the name of another. They're only", "allowed to kill this target,", "or the player hunting them.", "Trying to hurt anyone else", "will damage yourself instead.") {
+			@Override
+			protected void changed()
+			{
+				numLives.setHidden(isEnabled());
+				if ( isEnabled() )
+					numLives.setValue(1);
+			}
+		};
 		
 		useTeams = new ToggleOption("Use Teams", false, "Allows players to be divided", "into separate teams.") {
 			@Override

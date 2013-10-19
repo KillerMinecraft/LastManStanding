@@ -1,5 +1,6 @@
 package com.ftwinston.KillerMinecraft.Modules.LastManStanding;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class LastManStanding extends GameMode
 	}
 	
 	LMSTeamInfo[] teams = new LMSTeamInfo[0];
+	HashMap<String, Integer> playerLives = new HashMap<String, Integer>(); 
 	
 	@Override
 	public int getMinPlayers() { return contractKills.isEnabled() ? 4 : 2; }
@@ -303,8 +305,10 @@ public class LastManStanding extends GameMode
 	@Override
 	public void gameStarted()
 	{
-		int numPlayers = getOnlinePlayers().size();
-		if ( contractKills.isEnabled() && numPlayers < getMinPlayers() )
+		playerLives.clear();
+		
+		List<Player> players = getOnlinePlayers();
+		if ( contractKills.isEnabled() && players.size() < getMinPlayers() )
 		{
 			contractKills.toggle();
 			broadcastMessage("'Contract Kills' has been disabled: insufficient players to assign targets. A minimum of " + getMinPlayers() + " players are required.");
@@ -321,10 +325,16 @@ public class LastManStanding extends GameMode
 				team.lives.setScore(num * numLives.getValue());
 			}
 		}
-		else if ( centralizedSpawns.isEnabled() )
+		else
 		{
-			angularSeparation = 2 * Math.PI / numPlayers;
-			spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
+			for ( Player player : players )
+				playerLives.put(player.getName(), numLives.getValue());
+			
+			if ( centralizedSpawns.isEnabled() )
+			{
+				angularSeparation = 2 * Math.PI / players.size();
+				spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
+			}
 		}
 		
 		inWarmup = true;
@@ -371,6 +381,7 @@ public class LastManStanding extends GameMode
 	@Override
 	public void gameFinished()
 	{
+		playerLives.clear();
 		victimWarningTimes.clear();
 		nextPlayerNumber = 1;
 		
@@ -384,6 +395,12 @@ public class LastManStanding extends GameMode
 	@Override
 	public void playerJoinedLate(Player player, boolean isNewPlayer)
 	{
+		if ( !useTeams.isEnabled() && isNewPlayer )
+			playerLives.put(player.getName(), numLives.getValue());
+		
+		if ( !contractKills.isEnabled() )
+			return;
+		
 		if ( !isNewPlayer )
 		{
 			Player target = Helper.getTargetOf(getGame(), player);
@@ -430,9 +447,9 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			// how do we store lives against individual players, anyway?
-			
-			// I guess we want some way of overriding the PlayerInfo, perhaps?
+			int lives = playerLives.get(player.getName());
+			if ( lives > 0 )
+				playerLives.put(player.getName(), lives-1);
 		}
 	}
 	
@@ -447,10 +464,8 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			// how do we store lives against individual players, anyway?
-			
-			// I guess we want some way of overriding the PlayerInfo, perhaps?
-			return false;
+			int lives = playerLives.get(player.getName());
+			return lives > 0;
 		}
 	}
 	

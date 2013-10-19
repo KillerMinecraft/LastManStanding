@@ -42,7 +42,7 @@ public class LastManStanding extends GameMode
 	LMSTeamInfo[] teams = new LMSTeamInfo[0];
 	
 	@Override
-	public int getMinPlayers() { return 4; }
+	public int getMinPlayers() { return contractKills.isEnabled() ? 4 : 2; }
 	
 	@Override
 	public Option[] setupOptions()
@@ -214,7 +214,7 @@ public class LastManStanding extends GameMode
 		}
 	}
 	
-	final double teamSeparation = 100, playerSeparation = 8;
+	final double teamSeparation = 100, playerSeparation = 12;
 	double angularSeparation, spawnCircleRadius;
 
 	private Location getCircleSpawnLocation(int spawnNumber, double separation)
@@ -306,6 +306,13 @@ public class LastManStanding extends GameMode
 	@Override
 	public void gameStarted()
 	{
+		int numPlayers = getOnlinePlayers().size();
+		if ( contractKills.isEnabled() && numPlayers < getMinPlayers() )
+		{
+			contractKills.toggle();
+			broadcastMessage("'Contract Kills' has been disabled: insufficient players to assign targets. A minimum of " + getMinPlayers() + " players are required.");
+		}
+		
 		if ( useTeams.isEnabled() )
 		{
 			angularSeparation = 2 * Math.PI / teams.length;
@@ -313,14 +320,14 @@ public class LastManStanding extends GameMode
 		}
 		else if ( centralizedSpawns.isEnabled() )
 		{
-			angularSeparation = 2 * Math.PI / getOnlinePlayers().size();
+			angularSeparation = 2 * Math.PI / numPlayers;
 			spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
 		}
 		
 		inWarmup = true;
 		nextPlayerNumber = 1; // ensure that the player placement logic starts over again
 		
-		// allocation doesn't happen right away, there's 30 seconds of "scrabbling" first
+		// allocation doesn't happen right away, there's 10 seconds of "scrabbling" first
 		allocationProcessID = getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
 			public void run()
 			{
@@ -335,11 +342,6 @@ public class LastManStanding extends GameMode
 		// give everyone a target, make them be someone else's target
 		List<Player> players = getOnlinePlayers(new PlayerFilter().alive());
 		
-		if ( players.size() < getMinPlayers() )
-		{
-			broadcastMessage("Cannot start game: insufficient players to assign targets. A minimum of " + getMinPlayers() + " players are required.");
-			return;
-		}
 		
 		Player firstOne = players.remove(random.nextInt(players.size()));
 		Player prevOne = firstOne;
@@ -497,6 +499,9 @@ public class LastManStanding extends GameMode
 		Player attacker = Helper.getAttacker(event);
 		if ( attacker == null )
 			return;
+		
+		if ( inWarmup )
+			event.setCancelled(true);
 		
 		Player victimTarget = Helper.getTargetOf(getGame(), victim);
 		Player attackerTarget = Helper.getTargetOf(getGame(), attacker);

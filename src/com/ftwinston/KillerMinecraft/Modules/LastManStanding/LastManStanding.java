@@ -159,26 +159,47 @@ public class LastManStanding extends GameMode
 	@Override
 	public String getHelpMessage(int num, TeamInfo team)
 	{
-		switch ( num )
-		{
+		if ( useTeams.isEnabled() )
+			switch ( num )
+			{
+			case 0:
+				return "Players have been split into " + teams.length + " teams. Each time you die, your team's lives decreases by 1.";
+			case 1:
+				return "When a team has no lives left, they cannot respawn. The last team standing wins the game!";
+			case 2:
+				return "Your compass will point to the nearest player on another team.";
+			default:
+				return null;
+			}
+		else if ( contractKills.isEnabled() )
+			switch ( num )
+			{
 			case 0:
 				if ( inWarmup )
 					return "Every player will soon be assigned a target to kill, which they must do without being seen by anyone else.";
 				else
 					return "Every player has been assigned a target to kill, which they must do without being seen by anyone else.";
-			
 			case 1:
 				return "Your compass points towards your victim, and if anyone sees you kill them, you will die instead of them.";
-			
 			case 2:
 				return "Remember that someone else is hunting you! If you kill anyone other than your target or your hunter, you will die instead of them.";
-			
 			case 3:
 				return "When you kill your target, you are assigned their target, and the game continues until only one player remains alive.";
-			
 			default:
 				return null;
-		}
+			}
+		else
+			switch ( num )
+			{
+			case 0:
+				return "Each time you die, your lives decreases by 1.";
+			case 1:
+				return "When you have no lives left, you cannot respawn. The player standing wins the game!";
+			case 2:
+				return "Your compass will point to the nearest player apart from yourself.";
+			default:
+				return null;
+			}
 	}
 	
 	@Override

@@ -1,6 +1,5 @@
 package com.ftwinston.KillerMinecraft.Modules.LastManStanding;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +44,6 @@ public class LastManStanding extends GameMode
 	}
 	
 	LMSTeamInfo[] teams = new LMSTeamInfo[0];
-	HashMap<String, Score> playerLives = new HashMap<String, Score>(); 
 	
 	@Override
 	public int getMinPlayers() { return contractKills.isEnabled() ? 4 : 2; }
@@ -214,7 +212,7 @@ public class LastManStanding extends GameMode
 			}
 	}
 	
-	Objective objective;
+	Objective playerLives;
 	
 	@Override
 	public Scoreboard createScoreboard()
@@ -226,9 +224,9 @@ public class LastManStanding extends GameMode
 		else
 			scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
 		
-		objective = scoreboard.registerNewObjective("lives", "dummy");
-		objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-		objective.setDisplayName("Lives remaining");
+		playerLives = scoreboard.registerNewObjective("lives", "dummy");
+		playerLives.setDisplaySlot(DisplaySlot.SIDEBAR);
+		playerLives.setDisplayName("Lives remaining");
 		
 		return scoreboard;
 	}
@@ -357,8 +355,6 @@ public class LastManStanding extends GameMode
 	@Override
 	public void gameStarted()
 	{
-		playerLives.clear();
-		
 		List<Player> players = getOnlinePlayers();
 		if ( contractKills.isEnabled() && players.size() < getMinPlayers() )
 		{
@@ -381,9 +377,8 @@ public class LastManStanding extends GameMode
 		{
 			for ( Player player : players )
 			{
-				Score score = objective.getScore(player);
+				Score score = playerLives.getScore(player);
 				score.setScore(numLives.getValue());
-				playerLives.put(player.getName(), score);
 			}
 			
 			if ( centralizedSpawns.isEnabled() )
@@ -437,7 +432,6 @@ public class LastManStanding extends GameMode
 	@Override
 	public void gameFinished()
 	{
-		playerLives.clear();
 		victimWarningTimes.clear();
 		nextPlayerNumber = 1;
 		
@@ -453,9 +447,8 @@ public class LastManStanding extends GameMode
 	{
 		if ( !useTeams.isEnabled() && isNewPlayer )
 		{
-			Score score = objective.getScore(player);
+			Score score = playerLives.getScore(player);
 			score.setScore(numLives.getValue());
-			playerLives.put(player.getName(), score);
 		}
 		
 		if ( !contractKills.isEnabled() )
@@ -507,7 +500,7 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			Score score = playerLives.get(player.getName());
+			Score score = playerLives.getScore(player);
 			if ( score.getScore() > 0 )
 				score.setScore(score.getScore()-1);
 		}
@@ -524,7 +517,7 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			Score lives = playerLives.get(player.getName());
+			Score lives = playerLives.getScore(player);
 			return lives.getScore() > 0;
 		}
 	}

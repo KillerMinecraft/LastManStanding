@@ -22,6 +22,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -237,8 +238,15 @@ public class LastManStanding extends GameMode
 	@Override
 	public boolean isLocationProtected(Location l, Player p) { return inWarmup && centralizedSpawns.isEnabled(); }
 	
-	@Override
-	public boolean useDiscreetDeathMessages() { return false; }
+	private OfflinePlayer getTargetOf(OfflinePlayer player)
+	{
+		return null;
+	}
+
+	private void setTargetOf(OfflinePlayer player, OfflinePlayer target)
+	{
+		
+	}
 	
 	@Override
 	public Location getSpawnLocation(Player player)
@@ -404,8 +412,7 @@ public class LastManStanding extends GameMode
 	private void allocateTargets()
 	{
 		// give everyone a target, make them be someone else's target
-		List<Player> players = getOnlinePlayers(new PlayerFilter().alive());
-		
+		List<Player> players = getOnlinePlayers(new PlayerFilter());
 		
 		Player firstOne = players.remove(random.nextInt(players.size()));
 		Player prevOne = firstOne;
@@ -414,14 +421,14 @@ public class LastManStanding extends GameMode
 		{
 			
 			Player current = players.remove(random.nextInt(players.size()));
-			Helper.setTargetOf(getGame(), prevOne, current);
+			setTargetOf(prevOne, current);
 			
 			prevOne.sendMessage("Your target is: " +  ChatColor.YELLOW + current.getName() + ChatColor.RESET + "!");
 			prevOne.getInventory().addItem(new ItemStack(Material.COMPASS, 1));
 			prevOne = current;
 		}
 		
-		Helper.setTargetOf(getGame(), prevOne, firstOne);
+		setTargetOf(prevOne, firstOne);
 		prevOne.sendMessage("Your target is: " +  ChatColor.YELLOW + firstOne.getName() + ChatColor.RESET + "!");
 		prevOne.getInventory().addItem(new ItemStack(Material.COMPASS, 1));
 		
@@ -443,9 +450,23 @@ public class LastManStanding extends GameMode
 	}
 	
 	@Override
-	public void playerJoinedLate(Player player, boolean isNewPlayer)
+	public void playerReconnected(Player player)
 	{
-		if ( !useTeams.isEnabled() && isNewPlayer )
+		if ( !contractKills.isEnabled() )
+			return;
+		
+		OfflinePlayer target = getTargetOf(player);
+		if ( target != null )
+			player.sendMessage("Your target is: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
+		else
+			player.sendMessage("You don't seem to have a target... sorry!");
+		return;
+	}
+	
+	@Override
+	public void playerJoinedLate(Player player)
+	{
+		if ( !useTeams.isEnabled() )
 		{
 			Score score = playerLives.getScore(player);
 			score.setScore(numLives.getValue());
@@ -454,17 +475,7 @@ public class LastManStanding extends GameMode
 		if ( !contractKills.isEnabled() )
 			return;
 		
-		if ( !isNewPlayer )
-		{
-			Player target = Helper.getTargetOf(getGame(), player);
-			if ( target != null )
-				player.sendMessage("Your target is: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
-			else
-				player.sendMessage("You don't seem to have a target... sorry!");
-			return;
-		}
-		
-		List<Player> players = getOnlinePlayers(new PlayerFilter().alive());
+		List<Player> players = getOnlinePlayers(new PlayerFilter());
 		if ( players.size() < 2 )
 			return;
 		
@@ -475,9 +486,9 @@ public class LastManStanding extends GameMode
 				continue; // ignore self
 			else if ( i == hunterIndex )
 			{
-				Player target = Helper.getTargetOf(getGame(), hunter);
-				Helper.setTargetOf(getGame(), player, target);
-				Helper.setTargetOf(getGame(), hunter, player);
+				OfflinePlayer target = getTargetOf(hunter);
+				setTargetOf(player, target);
+				setTargetOf(hunter, player);
 				
 				hunter.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + player.getName() + ChatColor.RESET + "!");
 				
@@ -489,36 +500,24 @@ public class LastManStanding extends GameMode
 				i++;
 	}
 	
-	@Override
-	public void playerKilled(Player player)
-	{
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onPlayerKilled(PlayerDeathEvent event)
+	{		
 		if ( useTeams.isEnabled() )
 		{
-			LMSTeamInfo team = (LMSTeamInfo)getTeam(player);
+			LMSTeamInfo team = (LMSTeamInfo)getTeam(event.getEntity());
 			if ( team.lives.getScore() > 0 )
 				team.lives.setScore(team.lives.getScore() - 1);
+			else
+				Helper.makeSpectator(getGame(), event.getEntity());
 		}
 		else
 		{
-			Score score = playerLives.getScore(player);
+			Score score = playerLives.getScore(event.getEntity());
 			if ( score.getScore() > 0 )
 				score.setScore(score.getScore()-1);
-		}
-	}
-	
-
-	@Override
-	public boolean isAllowedToRespawn(Player player)
-	{
-		if ( useTeams.isEnabled() )
-		{
-			LMSTeamInfo team = (LMSTeamInfo)getTeam(player);
-			return team.lives.getScore() > 0;
-		}
-		else
-		{
-			Score lives = playerLives.getScore(player);
-			return lives.getScore() > 0;
+			else
+				Helper.makeSpectator(getGame(), event.getEntity());
 		}
 	}
 	
@@ -535,7 +534,7 @@ public class LastManStanding extends GameMode
 			LMSTeamInfo lastTeam = null;
 			
 			for ( LMSTeamInfo team : teams )
-				if ( getOnlinePlayers(new PlayerFilter().alive().team(team)).size() > 0 )
+				if ( getOnlinePlayers(new PlayerFilter().team(team)).size() > 0 )
 				{
 					if ( lastTeam != null )
 						return; // multiple teams have players left
@@ -552,23 +551,23 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			List<Player> survivors = getOnlinePlayers(new PlayerFilter().alive());
+			List<Player> survivors = getOnlinePlayers(new PlayerFilter());
 			
 			if ( contractKills.isEnabled() )
 			{
 				if ( survivors.size() > 1 ) 
 				{// find this player's hunter ... change their target to this player's target
 					for ( Player survivor : survivors )
-						if ( player == Helper.getTargetOf(getGame(), survivor) )
+						if ( player == getTargetOf(survivor) )
 						{
-							Player target = Helper.getTargetOf(getGame(), player);
-							Helper.setTargetOf(getGame(), survivor, target);
+							OfflinePlayer target = getTargetOf(player);
+							setTargetOf(survivor, target);
 							
 							survivor.sendMessage("Your target has changed, and is now: " +  ChatColor.YELLOW + target.getName() + ChatColor.RESET + "!");
 							break;
 						}
 				}
-				Helper.setTargetOf(getGame(), player, null);
+				setTargetOf(player, null);
 			}
 			
 			if ( survivors.size() == 1 )
@@ -597,17 +596,17 @@ public class LastManStanding extends GameMode
 		if ( useTeams.isEnabled() )
 		{
 			TeamInfo team = getTeam(player);
-			return Helper.getNearestPlayerTo(player, getOnlinePlayers(new PlayerFilter().alive().notTeam(team))); // points in a random direction if no players are found
+			return Helper.getNearestPlayerTo(player, getOnlinePlayers(new PlayerFilter().notTeam(team))); // points in a random direction if no players are found
 		}
 		else if ( contractKills.isEnabled() )
 		{
-			Player target = Helper.getTargetOf(getGame(), player);
-			if ( target != null )
-				return target.getLocation();
+			OfflinePlayer target = getTargetOf(player);
+			if ( target != null && target.isOnline() )
+				return ((Player)target).getLocation();
 			return null;
 		}
 		else
-			return Helper.getNearestPlayerTo(player, getOnlinePlayers(new PlayerFilter().alive())); // points in a random direction if no players are found
+			return Helper.getNearestPlayerTo(player, getOnlinePlayers(new PlayerFilter())); // points in a random direction if no players are found
 	}
 	
 	private static final double maxObservationRangeSq = 60 * 60;
@@ -646,21 +645,21 @@ public class LastManStanding extends GameMode
 		if ( inWarmup )
 			event.setCancelled(true);
 		
-		Player victimTarget = Helper.getTargetOf(getGame(), victim);
-		Player attackerTarget = Helper.getTargetOf(getGame(), attacker);
+		OfflinePlayer victimTarget = getTargetOf(victim);
+		OfflinePlayer attackerTarget = getTargetOf(attacker);
 
 		// armour is a problem. looks like its handled in EntityHuman.b(DamageSource damagesource, int i) - can replicate the code ... technically also account for enchantments
 		if ( event.getDamage() >= victim.getHealth() )
 			if ( attackerTarget == victim || victimTarget == attacker )
 			{// this interaction was allowed ... should still check if they were observed!
-				List<Player> survivors = getOnlinePlayers(new PlayerFilter().alive());
+				List<Player> survivors = getOnlinePlayers(new PlayerFilter());
 				
 				for ( Player observer : survivors )
 				{
 					 if ( observer == victim || observer == attacker )
 						 continue;
 					 
-					 if ( Helper.playerCanSeeOther(observer, attacker, maxObservationRangeSq) )
+					 if ( Helper.canSee(observer, attacker, maxObservationRangeSq) )
 					 {
 						 attacker.damage(50);
 						 

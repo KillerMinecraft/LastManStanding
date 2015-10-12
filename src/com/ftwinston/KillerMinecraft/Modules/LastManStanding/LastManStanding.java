@@ -385,7 +385,7 @@ public class LastManStanding extends GameMode
 		{
 			for ( Player player : players )
 			{
-				Score score = playerLives.getScore(player);
+				Score score = playerLives.getScore(player.getName());
 				score.setScore(numLives.getValue());
 			}
 			
@@ -468,7 +468,7 @@ public class LastManStanding extends GameMode
 	{
 		if ( !useTeams.isEnabled() )
 		{
-			Score score = playerLives.getScore(player);
+			Score score = playerLives.getScore(player.getName());
 			score.setScore(numLives.getValue());
 		}
 		
@@ -513,7 +513,7 @@ public class LastManStanding extends GameMode
 		}
 		else
 		{
-			Score score = playerLives.getScore(event.getEntity());
+			Score score = playerLives.getScore(event.getEntity().getName());
 			if ( score.getScore() > 0 )
 				score.setScore(score.getScore()-1);
 			else

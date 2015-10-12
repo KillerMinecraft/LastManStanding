@@ -1,6 +1,6 @@
-name: Last Man Standing
+name: Last_Man_Standing
 main: com.ftwinston.KillerMinecraft.Modules.LastManStanding.Plugin
-depend: [Killer Minecraft]
+depend: [Killer_Minecraft]
 version: 1
 load: STARTUP
 description: A game mode for Killer Minecraft

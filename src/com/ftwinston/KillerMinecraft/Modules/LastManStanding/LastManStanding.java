@@ -14,7 +14,7 @@ import com.ftwinston.KillerMinecraft.Configuration.ToggleOption;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Color;
+import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World.Environment;
@@ -70,9 +70,7 @@ public class LastManStanding extends GameMode
 								@Override
 								public ChatColor getChatColor() { return ChatColor.RED; }
 								@Override
-								public byte getWoolColor() { return (byte)0xE; }
-								@Override
-								public Color getArmorColor() { return Color.RED; }
+								public DyeColor getDyeColor() { return DyeColor.RED; }
 							}; break;
 						case 1:
 							newTeams[i] = new LMSTeamInfo(i) {
@@ -81,9 +79,7 @@ public class LastManStanding extends GameMode
 								@Override
 								public ChatColor getChatColor() { return ChatColor.BLUE; }
 								@Override
-								public byte getWoolColor() { return (byte)0xB; }
-								@Override
-								public Color getArmorColor() { return Color.fromRGB(0x0066FF); }
+								public DyeColor getDyeColor() { return DyeColor.BLUE; }
 							}; break;
 						case 2:
 							newTeams[i] = new LMSTeamInfo(i) {
@@ -92,9 +88,7 @@ public class LastManStanding extends GameMode
 								@Override
 								public ChatColor getChatColor() { return ChatColor.YELLOW; }
 								@Override
-								public byte getWoolColor() { return (byte)0x4; }
-								@Override
-								public Color getArmorColor() { return Color.YELLOW; }
+								public DyeColor getDyeColor() { return DyeColor.YELLOW; }
 							}; break;
 						case 3:
 							newTeams[i] = new LMSTeamInfo(i) {
@@ -103,9 +97,7 @@ public class LastManStanding extends GameMode
 								@Override
 								public ChatColor getChatColor() { return ChatColor.GREEN; }
 								@Override
-								public byte getWoolColor() { return (byte)0x5; }
-								@Override
-								public Color getArmorColor() { return Color.GREEN; }
+								public DyeColor getDyeColor() { return DyeColor.GREEN; }
 							}; break;
 					}
 				teams = newTeams;

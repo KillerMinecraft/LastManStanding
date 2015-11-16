@@ -8,10 +8,10 @@ import com.ftwinston.KillerMinecraft.GameModePlugin;
 public class Plugin extends GameModePlugin
 {
 	@Override
-	public Material getMenuIcon() { return Material.BOOK_AND_QUILL; }
+	public Material getMenuIcon() { return Material.BOW; }
 	
 	@Override
-	public String[] getDescriptionText() { return new String[] {"Each player tries to kill one other", "player, while being hunted by", "someone else. Kill your target and", "their target becomes yours."}; }
+	public String[] getDescriptionText() { return new String[] {"Kill or be killed, on your", "own or in a team."}; }
 	
 	@Override
 	public GameMode createInstance()

@@ -2,6 +2,7 @@ package com.ftwinston.KillerMinecraft.Modules.LastManStanding;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 import com.ftwinston.KillerMinecraft.GameMode;
 import com.ftwinston.KillerMinecraft.Helper;
@@ -21,6 +22,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
@@ -32,6 +35,9 @@ public class LastManStanding extends GameMode
 {
 	ToggleOption useTeams, centralizedSpawns;
 	NumericOption numTeams, numLives;
+	
+	static final long centralSpawnImmobilizationDelay = 200;
+	long centralSpawnImmobilizationEnd;
 	
 	abstract class LMSTeamInfo extends TeamInfo
 	{
@@ -192,15 +198,19 @@ public class LastManStanding extends GameMode
 			Location spawnPoint = Helper.randomizeLocation(spawn, 0, 0, 0, 8, 0, 8);
 			return Helper.getSafeSpawnLocationNear(spawnPoint);
 		}
-		else if ( centralizedSpawns.isEnabled() )
-		{
-			int playerNumber = nextPlayerNumber ++; // get a number for this player, somehow.
-			return getCircleSpawnLocation(playerNumber, playerSeparation);
-		}
 		else
 		{
-			int playerNumber = nextPlayerNumber ++;
-			return getSpreadOutSpawn(playerNumber);
+			int playerNumber;
+			
+			if (inWarmup) // at the start, players spawn in sequence
+				playerNumber = nextPlayerNumber ++;
+			else // at the end, they spawn within the previously-allotted area
+				playerNumber = new Random().nextInt(nextPlayerNumber);
+		
+			if ( centralizedSpawns.isEnabled() )	
+				return getCircleSpawnLocation(playerNumber, playerSeparation);
+			else
+				return getSpreadOutSpawn(playerNumber);
 		}
 	}
 	
@@ -215,6 +225,9 @@ public class LastManStanding extends GameMode
 		
 		Location spawn = getWorld(0).getSpawnLocation();
 		double angle = angularSeparation * spawnNumber;
+		
+		while (angle >= Math.PI * 2)
+			angle -= Math.PI * 2;
 		
 		double x, z;
 		if ( angle < Math.PI / 2)
@@ -321,12 +334,33 @@ public class LastManStanding extends GameMode
 				angularSeparation = 2 * Math.PI / players.size();
 				spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
 				inWarmup = true;
+				
+				getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
+					@Override
+					public void run() {
+						inWarmup = false;
+					}
+				}, centralSpawnImmobilizationDelay);
+				centralSpawnImmobilizationEnd = getWorld(0).getFullTime();
+				
+				for (Player player : players)
+					immobilizePlayer(player, (int)centralSpawnImmobilizationDelay);
+
+
+				// TODO: create some central items (couple of chests, enchanting table
 			}
 
 			nextPlayerNumber = 1; // ensure that the player placement logic starts over again
 		}
 	}
 	
+	private void immobilizePlayer(Player player, int duration)
+	{
+		player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, duration, 50, false, false));
+		player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, duration, 50, false, false));
+		player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, duration, 50, false, false));
+	}
+
 	@Override
 	public void playerJoinedLate(Player player)
 	{
@@ -334,6 +368,12 @@ public class LastManStanding extends GameMode
 		{
 			Score score = playerLives.getScore(player.getName());
 			score.setScore(numLives.getValue());
+		}
+		
+		if (inWarmup)
+		{// prevent slightly-late joiners from having free reign, or being immoblized longer than everyone else
+			long duration = centralSpawnImmobilizationEnd - getWorld(0).getFullTime();
+			immobilizePlayer(player, (int)duration);			
 		}
 	}
 	
@@ -346,7 +386,11 @@ public class LastManStanding extends GameMode
 			if ( team.lives.getScore() > 0 )
 				team.lives.setScore(team.lives.getScore() - 1);
 			else
-				Helper.makeSpectator(getGame(), event.getEntity());
+			{
+				// make every player on this team a spectator
+				for (Player player : getOnlinePlayers(new PlayerFilter().team(team)))
+					Helper.makeSpectator(getGame(), player);
+			}
 		}
 		else
 		{

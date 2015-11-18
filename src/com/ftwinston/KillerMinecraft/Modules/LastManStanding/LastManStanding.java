@@ -4,6 +4,32 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.DyeColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
+import org.bukkit.World.Environment;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.Potion;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
+
 import com.ftwinston.KillerMinecraft.GameMode;
 import com.ftwinston.KillerMinecraft.Helper;
 import com.ftwinston.KillerMinecraft.Option;
@@ -11,25 +37,6 @@ import com.ftwinston.KillerMinecraft.PlayerFilter;
 import com.ftwinston.KillerMinecraft.Configuration.NumericOption;
 import com.ftwinston.KillerMinecraft.Configuration.TeamInfo;
 import com.ftwinston.KillerMinecraft.Configuration.ToggleOption;
-
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.DyeColor;
-import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.World.Environment;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Score;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.Team;
-import org.bukkit.Material;
 
 public class LastManStanding extends GameMode
 {
@@ -346,12 +353,119 @@ public class LastManStanding extends GameMode
 				for (Player player : players)
 					immobilizePlayer(player, (int)centralSpawnImmobilizationDelay);
 
-
-				// TODO: create some central items (couple of chests, enchanting table
+				createCentralSpawnItems();
 			}
 
 			nextPlayerNumber = 1; // ensure that the player placement logic starts over again
 		}
+	}
+	
+	private void createCentralSpawnItems()
+	{
+		// TODO: create some central items (couple of chests, enchanting table
+		World world = getWorld(0);
+		
+		Location centre = world.getSpawnLocation();
+		
+		Block b = world.getHighestBlockAt(centre.getBlockX(),  centre.getBlockZ());
+		b.setType(Material.ENCHANTMENT_TABLE);
+		
+		b = world.getHighestBlockAt(centre.getBlockX() + 1,  centre.getBlockZ() + 1);
+		populateRandomChest(b);
+		
+		b = world.getHighestBlockAt(centre.getBlockX() + 1,  centre.getBlockZ() - 1);
+		populateRandomChest(b);
+		
+		b = world.getHighestBlockAt(centre.getBlockX() - 1,  centre.getBlockZ() + 1);
+		populateRandomChest(b);
+		
+		b = world.getHighestBlockAt(centre.getBlockX() - 1,  centre.getBlockZ() - 1);
+		populateRandomChest(b);
+	}
+
+	private void populateRandomChest(Block b)
+	{
+		// TODO Auto-generated method stub
+		b.setType(Material.TRAPPED_CHEST);
+		
+		Inventory inv = ((Chest)b.getState()).getBlockInventory();
+		Random r = new Random();
+		
+		int numItems = r.nextInt(8) + 4;
+		for (int i=0; i<numItems; i++)
+			inv.setItem(r.nextInt(36), selectRandomItem(r));
+	}
+
+	private ItemStack selectRandomItem(Random r)
+	{
+		switch (r.nextInt(32))
+		{
+		case 0:
+		case 1:
+			return new ItemStack(Material.STONE_SWORD);
+		case 2:
+			return new ItemStack(Material.IRON_SWORD);
+		case 3:
+		case 4:
+			return new ItemStack(Material.BOW);
+		case 5:
+		case 6:
+			return new ItemStack(Material.ARROW, r.nextInt(8) + 2);
+		case 7:
+		case 8:
+		case 9:
+			return new ItemStack(Material.STONE_PICKAXE);
+		case 10:
+			return new ItemStack(Material.IRON_PICKAXE);
+		case 11:
+			return new ItemStack(Material.IRON_HELMET);
+		case 12:
+			return new ItemStack(Material.IRON_CHESTPLATE);
+		case 13:
+			return new ItemStack(Material.IRON_LEGGINGS);
+		case 14:
+			return new ItemStack(Material.IRON_BOOTS);
+		case 15:
+			return new ItemStack(Material.ENDER_PEARL, r.nextInt(3) + 1);
+		case 16:
+			return new ItemStack(Material.TNT, r.nextInt(4) + 1);
+		case 17:
+			return new ItemStack(Material.DIAMOND, 2);
+		case 18:
+			return new ItemStack(Material.BUCKET);
+		case 19:
+			return new ItemStack(Material.REDSTONE, r.nextInt(5) + 4);
+		case 20:
+			return new ItemStack(Material.COAL, r.nextInt(8) + 8);
+		case 21:
+			return createPotion(PotionType.SPEED, 1);
+		case 22:
+			return createPotion(PotionType.STRENGTH, 1);
+		case 23:
+			return createPotion(PotionType.INSTANT_HEAL, 2);
+		case 24:
+			return createPotion(PotionType.JUMP, 2);
+		case 25:
+			return createPotion(PotionType.NIGHT_VISION, 1);
+		case 26:
+			return createPotion(PotionType.REGEN, 1);
+		case 27:
+			return createPotion(PotionType.WATER_BREATHING, 1);
+		case 28:
+			return createPotion(PotionType.FIRE_RESISTANCE, 1);
+			
+		default:
+			return new ItemStack(Material.APPLE, r.nextInt(5) + 1);
+		}
+	}
+
+	private ItemStack createPotion(PotionType type, int level)
+	{
+		ItemStack stack = new ItemStack(Material.POTION);
+		Potion potion = new Potion(type);
+		potion.setLevel(level);
+		potion.apply(stack);
+		return stack;
 	}
 	
 	private void immobilizePlayer(Player player, int duration)

@@ -347,6 +347,7 @@ public class LastManStanding extends GameMode
 					@Override
 					public void run() {
 						inWarmup = false;
+						broadcastMessage(ChatColor.RED + "Go!");
 					}
 				}, centralSpawnImmobilizationDelay);
 				centralSpawnImmobilizationEnd = getWorld(0).getFullTime();

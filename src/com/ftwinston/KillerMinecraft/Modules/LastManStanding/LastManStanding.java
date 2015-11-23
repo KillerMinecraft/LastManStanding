@@ -13,6 +13,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -362,25 +363,57 @@ public class LastManStanding extends GameMode
 	
 	private void createCentralSpawnItems()
 	{
-		// TODO: create some central items (couple of chests, enchanting table
 		World world = getWorld(0);
+		Location center = world.getSpawnLocation();
 		
-		Location centre = world.getSpawnLocation();
+		// the area around the central spawn items should be clear of trees etc
+		for (int x = center.getBlockX() - 2; x <= center.getBlockX() + 2; x++)
+		{
+			for (int z = center.getBlockZ() - 2; z <= center.getBlockZ() + 2; z++)
+			{
+				Block b = world.getHighestBlockAt(x, z);
+				while (!isGround(b.getType()))
+				{
+					b.setType(Material.AIR);
+					b = b.getRelative(BlockFace.DOWN);
+				}
+			}
+		}
 		
-		Block b = world.getHighestBlockAt(centre.getBlockX(),  centre.getBlockZ());
+		// create some central items (couple of chests, enchanting table
+		Block b = world.getHighestBlockAt(center.getBlockX(),  center.getBlockZ());
 		b.setType(Material.ENCHANTMENT_TABLE);
 		
-		b = world.getHighestBlockAt(centre.getBlockX() + 1,  centre.getBlockZ() + 1);
+		b = world.getHighestBlockAt(center.getBlockX() + 1,  center.getBlockZ() + 1);
 		populateRandomChest(b);
 		
-		b = world.getHighestBlockAt(centre.getBlockX() + 1,  centre.getBlockZ() - 1);
+		b = world.getHighestBlockAt(center.getBlockX() + 1,  center.getBlockZ() - 1);
 		populateRandomChest(b);
 		
-		b = world.getHighestBlockAt(centre.getBlockX() - 1,  centre.getBlockZ() + 1);
+		b = world.getHighestBlockAt(center.getBlockX() - 1,  center.getBlockZ() + 1);
 		populateRandomChest(b);
 		
-		b = world.getHighestBlockAt(centre.getBlockX() - 1,  centre.getBlockZ() - 1);
+		b = world.getHighestBlockAt(center.getBlockX() - 1,  center.getBlockZ() - 1);
 		populateRandomChest(b);
+	}
+
+	private boolean isGround(Material type)
+	{
+		switch (type)
+		{
+		case GRASS:
+		case DIRT:
+		case STONE:
+		case COBBLESTONE:
+		case SAND:
+		case GRAVEL:
+		case SANDSTONE:
+		case STATIONARY_WATER:
+		case STATIONARY_LAVA:
+			return true;
+		default:
+			return false;
+		}
 	}
 
 	private void populateRandomChest(Block b)

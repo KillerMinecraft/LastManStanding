@@ -19,6 +19,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.Potion;
@@ -318,7 +319,7 @@ public class LastManStanding extends GameMode
 	{
 		List<Player> players = getOnlinePlayers();
 
-		if ( useTeams.isEnabled() )
+		if ( !useTeams.isEnabled() )
 		{
 			angularSeparation = 2 * Math.PI / teams.length;
 			spawnCircleRadius = 0.5 * teamSeparation / Math.sin(angularSeparation / 2);
@@ -340,7 +341,6 @@ public class LastManStanding extends GameMode
 			if ( centralizedSpawns.isEnabled() )
 			{
 				angularSeparation = 2 * Math.PI / players.size();
-				spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
 				inWarmup = true;
 				
 				getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
@@ -362,6 +362,19 @@ public class LastManStanding extends GameMode
 		}
 	}
 	
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onWorldInit(WorldInitEvent event)
+	{
+		if (!useTeams.isEnabled() && centralizedSpawns.isEnabled())
+		{
+			angularSeparation = 2 * Math.PI / getOnlinePlayers().size();
+			spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
+			
+			SpawnPopulator populator = new SpawnPopulator(event.getWorld().getSpawnLocation(), (int)spawnCircleRadius + 2, 14, 10);
+			event.getWorld().getPopulators().add(populator);
+		}
+	}
+		
 	private void createCentralSpawnItems()
 	{
 		World world = getWorld(0);

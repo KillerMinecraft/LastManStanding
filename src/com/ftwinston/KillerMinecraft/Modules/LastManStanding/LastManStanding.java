@@ -113,6 +113,9 @@ public class LastManStanding extends GameMode
 		
 		centralizedSpawns = new ToggleOption("Centralized spawns", true, "When enabled, players spawn in", "a circle around a chest full of", "equipment. When disabled, players", "spawn spread out in the world");
 		
+		shrinkingBorders = new ToggleOption("Shrinking Borders", false, ChatColor.RED + "Only if world borders are enabled", ChatColor.RESET + "When enabled, the world borders", "will get smaller every time", "a player is eliminated.");
+		shrinkingBorders.setHidden(true);
+		
 		useTeams = new ToggleOption("Use Teams", false, "Allows players to be divided", "into separate teams.") {
 			@Override
 			public void changed()
@@ -142,9 +145,6 @@ public class LastManStanding extends GameMode
 				}
 			}
 		};
-		
-		shrinkingBorders = new ToggleOption("Shrinking Borders", false, ChatColor.RED + "Only if world borders are enabled", ChatColor.RESET + "When enabled, the world borders", "will get smaller every time", "a player is eliminated.");
-		shrinkingBorders.setHidden(true);
 		
 		return new Option[] { useTeams, numTeams, centralizedSpawns, shrinkingBorders, numLives };
 	}
@@ -322,7 +322,7 @@ public class LastManStanding extends GameMode
 		}
 	}
 
-	boolean inWarmup = true, shouldShrinkWorldBorders;
+	boolean inWarmup = false, shouldShrinkWorldBorders;
 	int nextPlayerNumber = 1, initialNumPlayers, initialBorderRadius;
 	
 	@Override
@@ -334,7 +334,7 @@ public class LastManStanding extends GameMode
 		shouldShrinkWorldBorders = shrinkingBorders.isEnabled() && !shrinkingBorders.isHidden() && initialBorderRadius > 1;
 		initialNumPlayers = players.size();
 		
-		if ( !useTeams.isEnabled() )
+		if ( useTeams.isEnabled() )
 		{
 			angularSeparation = 2 * Math.PI / teams.length;
 			spawnCircleRadius = 0.5 * teamSeparation / Math.sin(angularSeparation / 2);

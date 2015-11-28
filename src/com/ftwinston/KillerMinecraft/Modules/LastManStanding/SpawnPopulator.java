@@ -134,7 +134,7 @@ class SpawnPopulator extends BlockPopulator
 		
 		int numItems = r.nextInt(8) + 4;
 		for (int i=0; i<numItems; i++)
-			inv.setItem(r.nextInt(36), selectRandomItem(r));
+			inv.setItem(r.nextInt(27), selectRandomItem(r));
 	}
 
 	private static ItemStack selectRandomItem(Random r)

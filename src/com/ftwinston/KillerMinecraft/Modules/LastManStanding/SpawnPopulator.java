@@ -7,7 +7,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.inventory.Inventory;
@@ -52,14 +51,14 @@ class SpawnPopulator extends BlockPopulator
 		for (int x = minX - cMinX; x < 16 && x + cMinX <= maxX; x++)
 			for (int z = minZ - cMinZ; z < 16 && z + cMinZ <= maxZ; z++)
 			{
+				for (int y=surfaceY + clearAboveY; y > surfaceY; y--)
+					c.getBlock(x, y, z).setType(Material.AIR);
+
 				c.getBlock(x, surfaceY, z).setType(Material.GRASS);
-				
-				for (int y=surfaceY + 1; y <= surfaceY + clearAboveY; y++)
-					c.getBlock(x, surfaceY, z).setType(Material.AIR);
 				
 				for (int y=surfaceY - 1; y >= surfaceY - fillBelowY; y--)
 				{
-					Block b = c.getBlock(x, surfaceY, z);
+					Block b = c.getBlock(x, y, z);
 					
 					if (isGround(b.getType()))
 						break;
@@ -67,7 +66,6 @@ class SpawnPopulator extends BlockPopulator
 					b.setType(Material.DIRT);
 				}
 			}
-		
 	}
 	
 	private static boolean isGround(Material type)
@@ -92,20 +90,6 @@ class SpawnPopulator extends BlockPopulator
 	public static void createCentralSpawnItems(World world)
 	{
 		Location center = world.getSpawnLocation();
-		
-		// the area around the central spawn items should be clear of trees etc
-		for (int x = center.getBlockX() - 2; x <= center.getBlockX() + 2; x++)
-		{
-			for (int z = center.getBlockZ() - 2; z <= center.getBlockZ() + 2; z++)
-			{
-				Block b = world.getHighestBlockAt(x, z);
-				while (!isGround(b.getType()))
-				{
-					b.setType(Material.AIR);
-					b = b.getRelative(BlockFace.DOWN);
-				}
-			}
-		}
 		
 		// create some central items (couple of chests, enchanting table
 		Block b = world.getHighestBlockAt(center.getBlockX(),  center.getBlockZ());

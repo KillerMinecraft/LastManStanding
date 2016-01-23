@@ -205,7 +205,25 @@ public class LastManStanding extends GameMode
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 		
 	@Override
-	public boolean isLocationProtected(Location l, Player p) { return inWarmup && centralizedSpawns.isEnabled(); }
+	public boolean isLocationProtected(Location l, Player p) {
+		if (!centralizedSpawns.isEnabled())
+			return false;
+		
+		if (inWarmup)
+			return true;
+		
+		// "item" chests shouldn't be destroyable
+		Location center = getWorld(0).getSpawnLocation();
+		if (center.getWorld() == l.getWorld()
+				&& l.getBlockX() >= center.getBlockX() - 1
+				&& l.getBlockX() <= center.getBlockX() + 1
+				&& l.getBlockZ() >= center.getBlockZ() - 1
+				&& l.getBlockZ() <= center.getBlockZ() + 1
+				&& l.getBlockY() == center.getBlockY())
+			return true;
+		
+		return false;
+	}
 	
 	@Override
 	public Location getSpawnLocation(Player player)
@@ -214,7 +232,7 @@ public class LastManStanding extends GameMode
 		{
 			LMSTeamInfo lmsTeam = (LMSTeamInfo)getTeam(player);
 			
-			Location spawn = getCircleSpawnLocation(lmsTeam.teamNum, teamSeparation);
+			Location spawn = getCircleSpawnLocation(lmsTeam.teamNum);
 			Location spawnPoint = Helper.randomizeLocation(spawn, 0, 0, 0, 8, 0, 8);
 			return Helper.getSafeSpawnLocationNear(spawnPoint);
 		}
@@ -228,7 +246,7 @@ public class LastManStanding extends GameMode
 				playerNumber = new Random().nextInt(nextPlayerNumber);
 		
 			if ( centralizedSpawns.isEnabled() )	
-				return getCircleSpawnLocation(playerNumber, playerSeparation);
+				return getCircleSpawnLocation(playerNumber);
 			else
 				return getSpreadOutSpawn(playerNumber);
 		}
@@ -237,7 +255,7 @@ public class LastManStanding extends GameMode
 	final double teamSeparation = 100, playerSeparation = 12;
 	double angularSeparation, spawnCircleRadius;
 
-	private Location getCircleSpawnLocation(int spawnNumber, double separation)
+	private Location getCircleSpawnLocation(int spawnNumber)
 	{
 		// spawns are spread out in a circle around the center.
 		// the radius of this circle is dependent on the number of players/teams, such that they will always
@@ -252,23 +270,23 @@ public class LastManStanding extends GameMode
 		double x, z;
 		if ( angle < Math.PI / 2)
 		{
-			x = separation * Math.cos(angle);
-			z = separation * Math.sin(angle);
+			x = spawnCircleRadius * Math.cos(angle);
+			z = spawnCircleRadius * Math.sin(angle);
 		}
 		else if ( angle < Math.PI )
 		{
-			x = -separation * Math.cos(Math.PI - angle);
-			z = separation * Math.sin(Math.PI - angle);
+			x = -spawnCircleRadius * Math.cos(Math.PI - angle);
+			z = spawnCircleRadius * Math.sin(Math.PI - angle);
 		}
 		else if ( angle < 3 * Math.PI / 2)
 		{
-			x = -separation * Math.cos(angle - Math.PI);
-			z = -separation * Math.sin(angle - Math.PI);
+			x = -spawnCircleRadius * Math.cos(angle - Math.PI);
+			z = -spawnCircleRadius * Math.sin(angle - Math.PI);
 		}
 		else
 		{
-			x = separation * Math.cos(2 * Math.PI - angle);
-			z = -separation * Math.sin(2 * Math.PI - angle);
+			x = spawnCircleRadius * Math.cos(2 * Math.PI - angle);
+			z = -spawnCircleRadius * Math.sin(2 * Math.PI - angle);
 		}
 		
 		spawn = spawn.add(x + 0.5, 0, z + 0.5);
@@ -355,9 +373,6 @@ public class LastManStanding extends GameMode
 			
 			if ( centralizedSpawns.isEnabled() )
 			{
-				angularSeparation = 2 * Math.PI / players.size();
-				inWarmup = true;
-				
 				getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
 					@Override
 					public void run() {
@@ -365,7 +380,7 @@ public class LastManStanding extends GameMode
 						broadcastMessage(ChatColor.RED + "Go!");
 					}
 				}, centralSpawnImmobilizationDelay);
-				centralSpawnImmobilizationEnd = getWorld(0).getFullTime();
+				centralSpawnImmobilizationEnd = getWorld(0).getFullTime() + centralSpawnImmobilizationDelay;
 				
 				for (Player player : players)
 					immobilizePlayer(player, (int)centralSpawnImmobilizationDelay);
@@ -379,9 +394,11 @@ public class LastManStanding extends GameMode
 	
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorldInit(WorldInitEvent event)
-	{
+	{			
 		if (!useTeams.isEnabled() && centralizedSpawns.isEnabled())
 		{
+			inWarmup = true;
+
 			angularSeparation = 2 * Math.PI / getOnlinePlayers().size();
 			spawnCircleRadius = 0.5 * playerSeparation / Math.sin(angularSeparation / 2);
 			
@@ -395,6 +412,7 @@ public class LastManStanding extends GameMode
 		player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, duration, 50, false, false));
 		player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, duration, 50, false, false));
 		player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, duration, 50, false, false));
+		player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, duration, -10, false, false));
 	}
 
 	@Override
@@ -419,9 +437,9 @@ public class LastManStanding extends GameMode
 		if ( useTeams.isEnabled() )
 		{
 			LMSTeamInfo team = (LMSTeamInfo)getTeam(event.getEntity());
-			if ( team.lives.getScore() > 0 )
+			if (team.lives.getScore() > 0)
 				team.lives.setScore(team.lives.getScore() - 1);
-			else
+			if (team.lives.getScore() <= 0)
 			{
 				// make every player on this team a spectator
 				for (Player player : getOnlinePlayers(new PlayerFilter().team(team)))
@@ -433,9 +451,9 @@ public class LastManStanding extends GameMode
 		else
 		{
 			Score score = playerLives.getScore(event.getEntity().getName());
-			if ( score.getScore() > 0 )
+			if (score.getScore() > 0)
 				score.setScore(score.getScore()-1);
-			else
+			if (score.getScore() <= 0)
 			{
 				Helper.makeSpectator(getGame(), event.getEntity());
 
@@ -489,7 +507,7 @@ public class LastManStanding extends GameMode
 		if ( survivors.size() == 1 )
 		{
 			Player survivor = survivors.get(0);
-			broadcastMessage(new PlayerFilter().exclude(survivor), survivor.getName() + " is the last man standing, and wins the game!");
+			broadcastMessage(new PlayerFilter().includeSpectators().exclude(survivor), survivor.getName() + " is the last man standing, and wins the game!");
 			survivor.sendMessage("You are the last man standing: you win the game!");
 		}
 		else if ( survivors.size() == 0 )
@@ -502,7 +520,11 @@ public class LastManStanding extends GameMode
 	
 	private void shrinkWorldBorders()
 	{
-		double numPlayers = getOnlinePlayers(new PlayerFilter()).size();	
+		double numPlayers = getOnlinePlayers(new PlayerFilter()).size();
+		
+		if (numPlayers == 2) // extra pressure for the last 2
+			numPlayers = 1;
+		
 		double targetRadius = initialBorderRadius * numPlayers / initialNumPlayers;  
 		
 		getWorld(0).getWorldBorder().setSize(targetRadius, shrinkingBorderMoveInterval);
